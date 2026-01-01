@@ -1,7 +1,7 @@
 SUMMARY = "Wrapper for enabling systemd services"
 
 LICENSE = "MIT"
-LIC_FILES_CHKSUM = "file://${COREBASE}/LICENSE;md5=4d92cd373abda3937c2bc47fbc49d690"
+LIC_FILES_CHKSUM = "file://${COREBASE}/LICENSE;md5=1cba34dd67f41321df36921342603dc7"
 
 PR = "r6"
 
