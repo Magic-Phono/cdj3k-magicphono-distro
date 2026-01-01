@@ -1,0 +1,20 @@
+# MAGICPHONO_BBLAYERS_CONF_VERSION is increased each time build/conf/bblayers.conf
+# changes incompatibly
+MAGICPHONO_BBLAYERS_CONF_VERSION = "1"
+
+BBPATH = "${TOPDIR}"
+BBFILES ?= ""
+
+BBLAYERS ?= " \
+  ##OEROOT##/meta \
+  ##OEROOT##/meta-magicphono \
+  ##OEROOT##/meta-yocto-bsp \
+  ${TOPDIR}/../meta-renesas/meta-rcar-gen3 \
+  ${TOPDIR}/../meta-linaro/meta-linaro-toolchain \
+  ${TOPDIR}/../meta-linaro/meta-optee \
+  ${TOPDIR}/../meta-openembedded/meta-oe \
+  ${TOPDIR}/../meta-openembedded/meta-filesystems \
+  ${TOPDIR}/../meta-cdj3k \
+  "
+
+
