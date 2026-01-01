@@ -28,7 +28,7 @@ SRCREV = "714c62b46379abb7558c544665522aca91691e10"
 
 PV = "229+git${SRCPV}"
 
-SRC_URI = "git://github.com/systemd/systemd.git;protocol=git \
+SRC_URI = "git://github.com/systemd/systemd.git;branch=main \
            file://touchscreen.rules \
            file://00-create-volatile.conf \
            file://init \
