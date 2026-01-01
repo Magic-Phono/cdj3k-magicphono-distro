@@ -36,6 +36,7 @@ Set up environment:
 ```
 cd cdj3k-magicphono-distro/
 export WORK=`pwd`
+./setup-local-build.sh
 source magicphono/oe-init-build-env
 ```
 
