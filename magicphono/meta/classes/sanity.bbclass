@@ -157,7 +157,7 @@ is a good way to visualise the changes."""
                 raise NotImplementedError(failmsg)
             index, meta_yocto_line = sanity_conf_find_line('LCONF_VERSION.*\n', lines)
             if meta_yocto_line:
-                lines[index] = 'POKY_BBLAYERS_CONF_VERSION = "1"\n'
+                lines[index] = 'MAGICPHONO_BBLAYERS_CONF_VERSION = "1"\n'
             else:
                 raise NotImplementedError(failmsg)
             with open(bblayers_fn, "w") as f:
