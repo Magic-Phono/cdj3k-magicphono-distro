@@ -22,7 +22,6 @@ patch patches/add-gpiodrv.patch
 patch patches/udev_makefile.patch
 patch patches/avoid-dirtying-fat.patch
 patch patches/disable-blink-cursor.patch
-patch patches/disable-boot-log.patch
 patch patches/enable-pwm-clk.patch
 patch patches/add-kernel-cmdline.patch
 patch patches/add-juce-alsa-trace.patch

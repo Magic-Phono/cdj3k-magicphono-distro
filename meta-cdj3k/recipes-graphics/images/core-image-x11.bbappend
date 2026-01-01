@@ -54,7 +54,7 @@ ROOTFS_POSTPROCESS_COMMAND += " my_postprocess_function ; "
 
 my_postprocess_function(){
     rm ${IMAGE_ROOTFS}/etc/hostname
-    echo -n CDJ3K > ${IMAGE_ROOTFS}/etc/hostname
+    echo -n MP_CDJ3K > ${IMAGE_ROOTFS}/etc/hostname
     cat  ${TOPDIR}/../meta-cdj3k/recipes-graphics/images/core-image-x11/etc/sysctl.conf_append >> ${IMAGE_ROOTFS}/etc/sysctl.conf
     cp -f ${TOPDIR}/../meta-cdj3k/recipes-graphics/images/core-image-x11/etc/99avahi-autoipd ${IMAGE_ROOTFS}/etc/udhcpc.d
     cp -f ${TOPDIR}/../meta-cdj3k/recipes-graphics/images/core-image-x11/bin/fsck.hfsplus ${IMAGE_ROOTFS}/sbin
