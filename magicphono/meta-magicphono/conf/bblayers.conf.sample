@@ -9,12 +9,12 @@ BBLAYERS ?= " \
   ##OEROOT##/meta \
   ##OEROOT##/meta-magicphono \
   ##OEROOT##/meta-yocto-bsp \
-  ${TOPDIR}/../meta-renesas/meta-rcar-gen3 \
-  ${TOPDIR}/../meta-linaro/meta-linaro-toolchain \
-  ${TOPDIR}/../meta-linaro/meta-optee \
-  ${TOPDIR}/../meta-openembedded/meta-oe \
-  ${TOPDIR}/../meta-openembedded/meta-filesystems \
-  ${TOPDIR}/../meta-cdj3k \
+  ##OEROOT##/../meta-renesas/meta-rcar-gen3 \
+  ##OEROOT##/../meta-linaro/meta-linaro-toolchain \
+  ##OEROOT##/../meta-linaro/meta-optee \
+  ##OEROOT##/../meta-openembedded/meta-oe \
+  ##OEROOT##/../meta-openembedded/meta-filesystems \
+  ##OEROOT##/../meta-cdj3k \
   "
 
 
