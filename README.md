@@ -1,6 +1,7 @@
 # MagicPhono Linux
 
 Distribution for CDJ-3000 based on OpenEmbedded/Yocto.
+
 Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-code-distribution/gnu-open-source-license/
 
 This is very much work in progress.
@@ -51,7 +52,7 @@ Install SDK:
 sudo $WORK/build/tmp/deploy/sdk/magicphono-glibc-x86_64-core-image-x11-aarch64-toolchain-2.1.3.sh
 ```
 
-Build image (2nd)
+Build image:
 
 ```
 cd $WORK/build
@@ -59,3 +60,5 @@ bitbake core-image-x11 -c cleansstate
 bitbake linux-renesas -c cleansstate
 bitbake core-image-x11
 ```
+
+Artifacts are in `$WORK/build/tmp/deploy/images/salvator-x/`.
