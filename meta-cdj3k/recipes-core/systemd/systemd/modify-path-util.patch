@@ -1,0 +1,11 @@
+--- a/src/basic/path-util.c	2019-10-26 17:11:03.707705000 +0900
++++ b/src/basic/path-util.c	2019-10-26 16:02:14.799867000 +0900
+@@ -430,6 +430,8 @@ int path_compare(const char *a, const ch
+ }
+ 
+ bool path_equal(const char *a, const char *b) {
++        if (a == NULL || b == NULL)
++                return false;
+         return path_compare(a, b) == 0;
+ }
+ 

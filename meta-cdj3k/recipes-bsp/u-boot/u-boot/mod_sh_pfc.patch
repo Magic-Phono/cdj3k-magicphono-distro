@@ -1,0 +1,47 @@
+--- a/drivers/gpio/sh_pfc.c	2018-11-22 09:54:07.251756000 +0900
++++ b/drivers/gpio/sh_pfc.c	2019-06-27 11:41:37.079637409 +0900
+@@ -633,3 +633,44 @@ int gpio_get_value(unsigned gpio)
+ {
+ 	return sh_gpio_get(gpio);
+ }
++
++
++#define PWM0_PWMCR			0x00000000e6e30000
++#define PWM1_PWMCR			0x00000000e6e31000
++#define  PWMCR_EN0			0x1
++#define  PWMCR_SYNC			0x800
++#define  PWMCR_CCMD			0x8000
++#define PWM0_PWMCNT			0x00000000e6e30004
++#define PWM1_PWMCNT			0x00000000e6e31004
++#define  PWMCNT0_CYC0_PH0	0x029a003c
++#define  PWMCNT1_CYC0_PH0	0x029a01fa
++void pwm_bl_ctrl(void)
++{
++	unsigned long value;
++
++	/* Jog LCD */
++	value = readl(PWM0_PWMCR);
++	value |= PWMCR_SYNC;
++	writel(value, PWM0_PWMCR);
++
++	value = PWMCNT0_CYC0_PH0;
++	writel(value, PWM0_PWMCNT);
++
++	value = readl(PWM0_PWMCR);
++	value &= ~PWMCR_SYNC;
++	value |= (PWMCR_CCMD + PWMCR_EN0);
++	writel(value, PWM0_PWMCR);
++
++	/* Main LCD */
++	value = readl(PWM1_PWMCR);
++	value |= PWMCR_SYNC;
++	writel(value, PWM1_PWMCR);
++
++	value = PWMCNT1_CYC0_PH0;
++	writel(value, PWM1_PWMCNT);
++
++	value = readl(PWM1_PWMCR);
++	value &= ~PWMCR_SYNC;
++	value |= (PWMCR_CCMD + PWMCR_EN0);
++	writel(value, PWM1_PWMCR);
++}

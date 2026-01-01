@@ -1,0 +1,57 @@
+--- a/aplay/aplay.c	2015-10-28 01:34:26.000000000 +0900
++++ b/aplay/aplay.c	2019-12-22 18:53:57.791703669 +0900
+@@ -2003,7 +2003,7 @@ static ssize_t pcm_writev(u_char **data,
+ /*
+  *  read function
+  */
+-
++#define MODIFY_PDJ
+ static ssize_t pcm_read(u_char *data, size_t rcount)
+ {
+ 	ssize_t r;
+@@ -2029,8 +2029,13 @@ static ssize_t pcm_read(u_char *data, si
+ 		} else if (r == -ESTRPIPE) {
+ 			suspend();
+ 		} else if (r < 0) {
++#ifdef MODIFY_PDJ
++			memset(data, 0, rcount);
++			count = 0;
++#else
+ 			error(_("read error: %s"), snd_strerror(r));
+ 			prg_exit(EXIT_FAILURE);
++#endif
+ 		}
+ 		if (r > 0) {
+ 			if (vumeter)
+@@ -2654,6 +2659,12 @@ static void playback_go(int fd, size_t l
+ 	if (written > 0 && loaded > 0)
+ 		memmove(audiobuf, audiobuf + written, loaded);
+ 
++#ifdef MODIFY_PDJ
++	if (fd == 0) {
++		fcntl(fd,F_SETFL,O_NONBLOCK);
++	}
++#endif
++
+ 	l = loaded;
+ 	while (written < count && !in_aborting) {
+ 		do {
+@@ -2666,8 +2677,18 @@ static void playback_go(int fd, size_t l
+ 				break;
+ 			r = safe_read(fd, audiobuf + l, c);
+ 			if (r < 0) {
++#ifdef MODIFY_PDJ
++				if (fd == 0) {
++					r = c;
++					memset(audiobuf + l, 0, c);
++				} else {
++					perror(name);
++					prg_exit(EXIT_FAILURE);
++				}
++#else
+ 				perror(name);
+ 				prg_exit(EXIT_FAILURE);
++#endif
+ 			}
+ 			fdcount += r;
+ 			if (r == 0)

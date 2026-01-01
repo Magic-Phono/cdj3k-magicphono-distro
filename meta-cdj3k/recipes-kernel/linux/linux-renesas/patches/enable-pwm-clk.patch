@@ -1,0 +1,13 @@
+--- a/drivers/pwm/pwm-rcar.c	2019-01-22 17:52:39.025917000 +0900
++++ b/drivers/pwm/pwm-rcar.c	2019-01-22 19:19:07.381918000 +0900
+@@ -242,6 +242,10 @@ static int rcar_pwm_probe(struct platfor
+ 
+ 	pm_runtime_enable(&pdev->dev);
+ 
++#ifdef CONFIG_PDJ
++	pm_runtime_get_sync(&pdev->dev);
++#endif
++
+ 	return 0;
+ }
+ 

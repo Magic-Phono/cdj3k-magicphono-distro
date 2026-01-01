@@ -1,0 +1,18 @@
+--- a/Makefile	2018-04-03 19:48:20.661756000 +0900
++++ b/Makefile	2018-04-04 10:33:40.820642549 +0900
+@@ -607,6 +607,7 @@ UBOOTINCLUDE    := \
+ 		-Iinclude \
+ 		$(if $(KBUILD_SRC), -I$(srctree)/include) \
+ 		-I$(srctree)/arch/$(ARCH)/include \
++		-I$(srctree)/tools/Realtek \
+ 		-include $(srctree)/include/linux/kconfig.h
+ 
+ NOSTDINC_FLAGS += -nostdinc -isystem $(shell $(CC) -print-file-name=include)
+@@ -662,6 +663,7 @@ libs-$(CONFIG_API) += api/
+ libs-$(CONFIG_HAS_POST) += post/
+ libs-y += test/
+ libs-y += test/dm/
++libs-y += tools/Realtek/
+ 
+ libs-y += $(if $(BOARDDIR),board/$(BOARDDIR)/)
+ 

@@ -1,0 +1,37 @@
+--- a/drivers/phy/phy-rcar-gen3-usb3.c	2019-08-10 13:52:42.131973000 +0900
++++ b/drivers/phy/phy-rcar-gen3-usb3.c	2020-01-14 18:17:09.137795944 +0900
+@@ -99,6 +99,34 @@ static int rcar_gen3_phy_usb3_init(struc
+ 	if (r->ssc_range)
+ 		rcar_gen3_phy_usb3_enable_ssc(r);
+ 
++#ifdef CONFIG_PDJ
++	{
++		void *regs = ioremap_nocache(0xe65ea000, 0x80);
++		u16 rx_eq;
++
++		if (regs) {
++			writew(0x0000, (regs + 0x0c));
++			wmb();
++			udelay(50);
++			writew(0x0080, (regs + 0x0c));
++			wmb();
++			udelay(50);
++			writew(0x0280, (regs + 0x0c)); /* EQ2 */
++			wmb();
++			udelay(50);
++			writew(0x0a80, (regs + 0x0c)); /* EQ2 */
++			wmb();
++			udelay(50);
++			rx_eq = readw(regs + 0x38); /* RX_EQ */
++			rmb();
++			udelay(50);
++			rx_eq = readw(regs + 0x38); /* RX_EQ */
++			rmb();
++			iounmap(regs);
++		}
++	}
++#endif
++
+ 	/* Enables VBUS detection anyway */
+ 	writew(VBUS_EN_VBUS_EN, r->base + USB30_VBUS_EN);
+ 

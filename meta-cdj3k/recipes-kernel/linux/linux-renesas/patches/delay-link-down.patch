@@ -1,0 +1,56 @@
+--- a/drivers/net/phy/phy.c	2020-03-16 14:45:14.654030000 +0900
++++ b/drivers/net/phy/phy.c	2020-03-25 14:38:59.933895688 +0900
+@@ -924,6 +924,9 @@ void phy_state_machine(struct work_struc
+ 	enum phy_state old_state;
+ 	int err = 0;
+ 	int old_link;
++#ifdef CONFIG_PDJ
++	static int delay_link_down = 0;
++#endif
+ 
+ 	mutex_lock(&phydev->lock);
+ 
+@@ -1021,8 +1024,22 @@ void phy_state_machine(struct work_struc
+ 			if (err)
+ 				break;
+ 
++#ifdef CONFIG_PDJ
++			if ((--delay_link_down > 0) && !phydev->link) {
++				printk("[%s]: Execute delay link down! : %d\n",__func__,delay_link_down);
++				phydev->link = 1;
++				break;
++			}
++#endif
++
+ 			if (old_link != phydev->link)
+ 				phydev->state = PHY_CHANGELINK;
++
++#ifdef CONFIG_PDJ
++			if (phydev->link) {
++				delay_link_down = 3;
++			}
++#endif
+ 		}
+ 		break;
+ 	case PHY_CHANGELINK:
+@@ -1118,8 +1135,20 @@ void phy_state_machine(struct work_struc
+ 
+ void phy_mac_interrupt(struct phy_device *phydev, int new_link)
+ {
++#ifdef CONFIG_PDJ
++	static int delay_link_down_interrupt = 0;
++	if (delay_link_down_interrupt && !new_link) {
++		printk("delay_link_down_interrupt!\n");
++		delay_link_down_interrupt = 0;
++		return;
++	}
++#endif
+ 	phydev->link = new_link;
+ 
++#ifdef CONFIG_PDJ
++	if (new_link)
++		delay_link_down_interrupt = 1;
++#endif
+ 	/* Trigger a state machine change */
+ 	queue_work(system_power_efficient_wq, &phydev->phy_queue);
+ }

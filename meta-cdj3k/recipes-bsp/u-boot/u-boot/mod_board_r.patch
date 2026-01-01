@@ -1,0 +1,18 @@
+--- a/common/board_r.c	2018-04-02 16:38:53.439807000 +0900
++++ b/common/board_r.c	2018-04-05 15:32:29.190453932 +0900
+@@ -58,6 +58,7 @@
+ #ifdef CONFIG_AVR32
+ #include <asm/arch/mmu.h>
+ #endif
++#include <rtk_switch.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -891,6 +892,7 @@ init_fnc_t init_sequence_r[] = {
+ #ifdef CONFIG_PS2KBD
+ 	initr_kbd,
+ #endif
++	rtk_switch_init,
+ 	run_main_loop,
+ };
+ 

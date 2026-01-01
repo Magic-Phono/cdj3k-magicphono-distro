@@ -1,0 +1,51 @@
+--- a/common/cmd_mdio.c	2018-04-27 14:05:44.144664000 +0900
++++ b/common/cmd_mdio.c	2018-04-27 15:55:46.000000000 +0900
+@@ -13,6 +13,8 @@
+ #include <command.h>
+ #include <miiphy.h>
+ #include <phy.h>
++#include <rtk_types.h>
++#include <port.h>
+ 
+ 
+ static char last_op[2];
+@@ -184,6 +186,7 @@ static int extract_phy_range(char *const
+ /* ---------------------------------------------------------------- */
+ static int do_mdio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ {
++	rtk_port_phy_data_t value;
+ 	char op[2];
+ 	int addrlo, addrhi, reglo, reghi, devadlo, devadhi;
+ 	unsigned short	data;
+@@ -210,6 +213,31 @@ static int do_mdio(cmd_tbl_t *cmdtp, int
+ 
+ 	bus = mdio_get_current_dev();
+ 
++	if (strlen(argv[1]) == 5) { /* test0 to 5 */
++		if(memcmp((const void*)argv[1], (const void*)"test", 4) == 0) {
++			rtk_port_phyReg_get((rtk_port_t)UTP_PORT0, (rtk_port_phy_reg_t)PHY_1000_BASET_CONTROL_REG, &value);
++			switch(argv[1][4]) {
++			case '1':
++				value |= 0x2000;
++				break;
++			case '2':
++				value |= 0x4000;
++				break;
++			case '3':
++				value |= 0x6000;
++				break;
++			case '4':
++				value |= 0x8000;
++				break;
++			default:
++				value &= 0x1FFF;
++				break;
++			}
++			rtk_port_phyReg_set((rtk_port_t)UTP_PORT0, (rtk_port_phy_reg_t)PHY_1000_BASET_CONTROL_REG, value);
++			return 0;
++		}
++	}
++
+ 	if (flag & CMD_FLAG_REPEAT)
+ 		op[0] = last_op[0];
+ 

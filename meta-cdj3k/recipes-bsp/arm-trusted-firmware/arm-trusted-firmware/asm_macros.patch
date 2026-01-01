@@ -1,0 +1,11 @@
+--- a/include/common/aarch64/asm_macros.S	2018-09-21 17:44:37.768878000 +0900
++++ b/include/common/aarch64/asm_macros.S	2018-09-21 17:46:54.624879012 +0900
+@@ -66,7 +66,7 @@
+ 	 */
+ 	.macro vector_entry  label
+ 	.section .vectors, "ax"
+-	.align 7, 0
++	.align 7
+ 	\label:
+ 	.endm
+ 

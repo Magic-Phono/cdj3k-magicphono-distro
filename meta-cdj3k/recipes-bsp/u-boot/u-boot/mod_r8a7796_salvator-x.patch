@@ -1,0 +1,70 @@
+--- a/include/configs/r8a7796_salvator-x.h	2018-09-13 17:01:21.565064000 +0900
++++ b/include/configs/r8a7796_salvator-x.h	2019-06-27 11:42:49.507639931 +0900
+@@ -31,11 +31,10 @@
+ 
+ /* Ethernet RAVB */
+ #define CONFIG_RAVB
+-#define CONFIG_RAVB_PHY_ADDR 0x0
++#define CONFIG_RAVB_PHY_ADDR 29
+ #define CONFIG_RAVB_PHY_MODE PHY_INTERFACE_MODE_RGMII_ID
+ #define CONFIG_NET_MULTI
+ #define CONFIG_PHYLIB
+-#define CONFIG_PHY_MICREL
+ #define CONFIG_BITBANGMII
+ #define CONFIG_BITBANGMII_MULTI
+ #define CONFIG_SH_ETHER_BITBANG
+@@ -108,13 +107,49 @@
+ 	"fdt_high=0xffffffffffffffff\0" \
+ 	"initrd_high=0xffffffffffffffff\0"
+ 
+-#define CONFIG_BOOTARGS \
+-	"root=/dev/nfs rw "     \
+-	"nfsroot=192.168.0.1:/export/rfs ip=192.168.0.20"
++#define CONFIG_BOOTARGS_SD      \
++	"rw root=/dev/mmcblk1p1 rootfstype=ext4 rootwait quiet loglevel=3"
++
++#define CONFIG_BOOTARGS_EMMC      \
++	"rw rootfstype=ramfs rootwait quiet loglevel=3"
+ 
+ #define CONFIG_BOOTCOMMAND      \
+-	"tftp 0x48080000 Image; " \
+-	"tftp 0x48000000 Image-r8a7796-salvator-x.dtb; " \
++	"run bootcmd_emmc"
++
++#define CONFIG_BOOTCOMMAND_SD      \
++	"set bootargs ${bootargs_sd}; " \
++	"ext2load mmc 0:1 0x48080000 /boot/Image; " \
++	"ext2load mmc 0:1 0x48000000 /boot/${dtb}; " \
++	"run booti_cmd"
++
++#define CONFIG_KERNEL_BANK      \
++    "A"
++
++#define CONFIG_BANK_PARTITION      \
++    "1:1"
++
++#define CONFIG_BOOTCOMMAND_EMMC      \
++	"set bootargs ${bootargs_emmc}; " \
++	"ext2load mmc ${part} 0x48080000 /boot/Image; " \
++	"ext2load mmc ${part} 0x48000000 /boot/${dtb}; " \
++	"run booti_cmd"
++
++#define CONFIG_BOOT_TYPE      \
++    "normal"
++
++#define CONFIG_BOOTI_CMD      \
+ 	"booti 0x48080000 - 0x48000000"
+ 
++#define CONFIG_DTB      \
++	"Image-r8a7796-salvator-x.dtb"
++
++#define CONFIG_ETHACT      \
++    "ravb"
++
++#define CONFIG_ETHADDR      \
++    C8:3D:FC:00:00:00
++
++#define CONFIG_SERIAL_NUMBER	\
++	"000000000000"
++
+ #endif /* __SALVATOR_X_H */

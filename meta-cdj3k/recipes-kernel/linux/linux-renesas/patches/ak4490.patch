@@ -1,0 +1,40 @@
+--- a/sound/soc/codecs/Kconfig	2018-09-13 17:01:21.077064000 +0900
++++ b/sound/soc/codecs/Kconfig	2018-10-23 18:13:46.494014874 +0900
+@@ -34,6 +34,7 @@ config SND_SOC_ALL_CODECS
+ 	select SND_SOC_ADAU1701 if I2C
+ 	select SND_SOC_ADAU7002
+ 	select SND_SOC_ADS117X
++	select SND_SOC_AK4490 if SPI_MASTER
+ 	select SND_SOC_AK4104 if SPI_MASTER
+ 	select SND_SOC_AK4535 if I2C
+ 	select SND_SOC_AK4554
+@@ -351,6 +352,10 @@ config SND_SOC_ADAV803
+ config SND_SOC_ADS117X
+ 	tristate
+ 
++config SND_SOC_AK4490
++	tristate "AKM AK4490 CODEC"
++	depends on SPI_MASTER
++
+ config SND_SOC_AK4104
+ 	tristate "AKM AK4104 CODEC"
+ 	depends on SPI_MASTER
+
+--- a/sound/soc/codecs/Makefile	2018-09-13 17:01:21.077064000 +0900
++++ b/sound/soc/codecs/Makefile	2018-11-28 11:49:30.890728312 +0900
+@@ -25,6 +25,7 @@ snd-soc-adav80x-objs := adav80x.o
+ snd-soc-adav801-objs := adav801.o
+ snd-soc-adav803-objs := adav803.o
+ snd-soc-ads117x-objs := ads117x.o
++snd-soc-ak4490-objs := ak4490.o
+ snd-soc-ak4104-objs := ak4104.o
+ snd-soc-ak4535-objs := ak4535.o
+ snd-soc-ak4554-objs := ak4554.o
+@@ -248,6 +249,7 @@ obj-$(CONFIG_SND_SOC_ADAV80X)  += snd-so
+ obj-$(CONFIG_SND_SOC_ADAV801)  += snd-soc-adav801.o
+ obj-$(CONFIG_SND_SOC_ADAV803)  += snd-soc-adav803.o
+ obj-$(CONFIG_SND_SOC_ADS117X)	+= snd-soc-ads117x.o
++obj-$(CONFIG_SND_SOC_AK4490)	+= snd-soc-ak4490.o
+ obj-$(CONFIG_SND_SOC_AK4104)	+= snd-soc-ak4104.o
+ obj-$(CONFIG_SND_SOC_AK4535)	+= snd-soc-ak4535.o
+ obj-$(CONFIG_SND_SOC_AK4554)	+= snd-soc-ak4554.o

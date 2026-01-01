@@ -1,0 +1,11 @@
+--- a/plat/renesas/rcar/drivers/board/board.c	2019-05-13 14:30:13.832287000 +0900
++++ b/plat/renesas/rcar/drivers/board/board.c	2019-05-13 14:54:59.444254273 +0900
+@@ -68,7 +68,7 @@ int32_t get_board_type(uint32_t *type, u
+ 	};
+ 
+ 	if (BOARD_ID_UNKNOWN == g_board_id) {
+-#if PMIC_ROHM_BD9571
++#if 0 /*PMIC_ROHM_BD9571*/
+ 		/* Board ID detection from EEPROM */
+ 		ret = rcar_iic_dvfs_recieve(SLAVE_ADDR_EEPROM,
+ 			REG_ADDR_BOARD_ID, &g_board_id);

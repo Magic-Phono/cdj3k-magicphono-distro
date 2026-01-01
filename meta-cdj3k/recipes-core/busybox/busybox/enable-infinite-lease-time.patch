@@ -1,0 +1,28 @@
+--- a/networking/udhcp/dhcpc.c	2020-02-18 14:56:06.461730082 +0900
++++ b/networking/udhcp/dhcpc.c	2020-02-18 14:55:32.815121990 +0900
+@@ -1735,6 +1735,9 @@ int udhcpc_main(int argc UNUSED_PARAM, c
+ 					if (lease_seconds >= 0x10000000)
+ 						lease_seconds = 0x0fffffff;
+ 				}
++#ifdef CONFIG_ATC
++				lease_seconds = 0x0fffffff;
++#endif
+ #if ENABLE_FEATURE_UDHCPC_ARPING
+ 				if (opt & OPT_a) {
+ /* RFC 2131 3.1 paragraph 5:
+
+--- a/networking/udhcp/Config.src	2020-02-18 15:23:48.516033863 +0900
++++ b/networking/udhcp/Config.src	2020-02-18 15:22:51.982180984 +0900
+@@ -163,3 +163,12 @@ config UDHCPC_SLACK_FOR_BUGGY_SERVERS
+ 	    maximum size of entire IP packet, and sends packets which are
+ 	    28 bytes too large.
+ 	  Seednet (ISP) VDSL: sends packets 2 bytes too large.
++
++config ATC
++	bool "Enable for Infinite lease time"
++	default y
++	depends on UDHCPC
++	help
++	  Special setting
++
++

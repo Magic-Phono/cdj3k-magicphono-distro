@@ -1,0 +1,179 @@
+--- a/include/linux/hid.h	2019-06-07 12:02:21.745127000 +0900
++++ b/include/linux/hid.h	2019-06-07 10:47:32.092972000 +0900
+@@ -555,6 +555,11 @@ struct hid_device {							/* device repo
+ 				  struct hid_usage *, __s32);
+ 	void (*hiddev_report_event) (struct hid_device *, struct hid_report *);
+ 
++#ifdef CONFIG_PDJ
++	int (*hid_output_raw_dreq) (struct hid_device *, unsigned char, unsigned short, unsigned short, unsigned short);
++	int (*hid_reset_device) (struct hid_device *);
++#endif
++
+ 	/* debugging support via debugfs */
+ 	unsigned short debug;
+ 	struct dentry *debug_dir;
+
+--- a/include/linux/hidraw.h	2019-06-07 12:02:21.769127000 +0900
++++ b/include/linux/hidraw.h	2019-06-07 10:56:43.572991000 +0900
+@@ -42,6 +42,15 @@ struct hidraw_list {
+ 	struct mutex read_mutex;
+ };
+ 
++#ifdef CONFIG_PDJ
++struct hidraw_dreq {
++	unsigned char req;
++	unsigned short val;
++	unsigned short index;
++	unsigned short len;
++};
++#endif
++
+ #ifdef CONFIG_HIDRAW
+ int hidraw_init(void);
+ void hidraw_exit(void);
+
+--- a/include/uapi/linux/hidraw.h	2019-06-07 12:02:24.000000000 +0900
++++ b/include/uapi/linux/hidraw.h	2019-06-17 11:29:29.993953096 +0900
+@@ -38,6 +38,10 @@ struct hidraw_devinfo {
+ /* The first byte of SFEATURE and GFEATURE is the report number */
+ #define HIDIOCSFEATURE(len)    _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x06, len)
+ #define HIDIOCGFEATURE(len)    _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x07, len)
++#ifdef CONFIG_PDJ
++#define HIDIOCDREQUEST(len)    _IOC(_IOC_WRITE|_IOC_READ, 'H', 0xAA, len)
++#define HIDIOCRESETDEV         _IO('H', 0xAB)
++#endif
+ 
+ #define HIDRAW_FIRST_MINOR 0
+ #define HIDRAW_MAX_DEVICES 64
+
+--- a/drivers/hid/hidraw.c	2019-06-07 12:02:17.000000000 +0900
++++ b/drivers/hid/hidraw.c	2019-06-17 11:25:05.693961295 +0900
+@@ -165,6 +165,31 @@ out:
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_PDJ
++static int hidraw_send_dreq(struct file *file, unsigned char req, unsigned short val, unsigned short index, unsigned short len)
++{
++	unsigned int minor = iminor(file->f_path.dentry->d_inode);
++	struct hid_device *dev;
++	int ret = 0;
++
++	if (!hidraw_table[minor]) {
++		ret = -ENODEV;
++		goto out;
++	}
++
++	dev = hidraw_table[minor]->hid;
++
++	if (!dev->hid_output_raw_dreq) {
++		ret = -ENODEV;
++		goto out;
++	}
++
++	ret = dev->hid_output_raw_dreq(dev, req, val, index, len);
++out:
++	return ret;
++}
++#endif
++
+ static ssize_t hidraw_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos)
+ {
+ 	ssize_t ret;
+@@ -429,6 +454,25 @@ static long hidraw_ioctl(struct file *fi
+ 					ret = hidraw_get_report(file, user_arg, len, HID_FEATURE_REPORT);
+ 					break;
+ 				}
++#ifdef CONFIG_PDJ
++				if (_IOC_NR(cmd) == _IOC_NR(HIDIOCDREQUEST(0))) {
++					struct hidraw_dreq dreq;
++					if (copy_from_user(&dreq, user_arg, sizeof(dreq))) {
++						ret = -EFAULT;
++						break;
++					}
++					ret = hidraw_send_dreq(file, dreq.req, dreq.val, dreq.index, dreq.len);
++					break;
++				}
++				if (_IOC_NR(cmd) == _IOC_NR(HIDIOCRESETDEV)) {
++					if (!hid->hid_reset_device) {
++						ret = -EFAULT;
++						break;
++					}
++					ret = hid->hid_reset_device(hid);
++					break;
++				}
++#endif
+ 
+ 				/* Begin Read-only ioctls. */
+ 				if (_IOC_DIR(cmd) != _IOC_READ) {
+
+--- a/drivers/hid/usbhid/hid-core.c	2019-06-07 12:02:17.277127000 +0900
++++ b/drivers/hid/usbhid/hid-core.c	2019-06-07 12:08:52.089140000 +0900
+@@ -951,6 +951,38 @@ static int usbhid_output_report(struct h
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_PDJ
++static int usbhid_output_raw_dreq(struct hid_device *hid, unsigned char req, unsigned short val, unsigned short index, unsigned short len)
++{
++	struct usb_device *dev = hid_to_usb_dev(hid);
++	int ret = 0;
++
++	ret = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
++	req,
++	USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
++	val,
++	index, NULL, 0,
++	USB_CTRL_SET_TIMEOUT);
++
++	return ret;
++}
++
++static int usbhid_reset_device(struct hid_device *hid)
++{
++	struct usb_device *dev = hid_to_usb_dev(hid);
++	struct usbhid_device *usbhid = hid->driver_data;
++	int ret = 0;
++
++	ret = usb_lock_device_for_reset(dev, usbhid->intf);
++	if (ret == 0) {
++		ret = usb_reset_device(dev);
++		usb_unlock_device(dev);
++	}
++
++	return ret;
++}
++#endif
++
+ static void hid_free_buffers(struct usb_device *dev, struct hid_device *hid)
+ {
+ 	struct usbhid_device *usbhid = hid->driver_data;
+@@ -1292,6 +1324,10 @@ static int usbhid_probe(struct usb_inter
+ 
+ 	usb_set_intfdata(intf, hid);
+ 	hid->ll_driver = &usb_hid_driver;
++#ifdef CONFIG_PDJ
++	hid->hid_output_raw_dreq = usbhid_output_raw_dreq;
++	hid->hid_reset_device = usbhid_reset_device;
++#endif
+ 	hid->ff_init = hid_pidff_init;
+ #ifdef CONFIG_USB_HIDDEV
+ 	hid->hiddev_connect = hiddev_connect;
+
+--- a/drivers/usb/core/generic.c	2019-06-09 14:25:28.955727000 +0900
++++ b/drivers/usb/core/generic.c	2019-06-09 17:09:46.183396000 +0900
+@@ -119,6 +119,14 @@ int usb_choose_configuration(struct usb_
+ #endif
+ 		}
+ 
++#ifdef CONFIG_PDJ
++		else if ((i == 0) && (num_configs > 1) && desc &&
++				((desc->bInterfaceClass == USB_CLASS_STILL_IMAGE) ||
++				 (desc->bInterfaceClass == USB_CLASS_MASS_STORAGE))) {
++			 continue;
++		}
++#endif
++
+ 		/* From the remaining configs, choose the first one whose
+ 		 * first interface is for a non-vendor-specific class.
+ 		 * Reason: Linux is more likely to have a class driver

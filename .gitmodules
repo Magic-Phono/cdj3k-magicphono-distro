@@ -1,0 +1,16 @@
+[submodule "meta-openembedded"]
+	path = meta-openembedded
+	url = https://github.com/openembedded/meta-openembedded
+	branch = krogoth
+[submodule "meta-renesas"]
+	path = meta-renesas
+	url = https://github.com/renesas-rcar/meta-renesas
+	branch = krogoth
+[submodule "meta-linaro"]
+	path = meta-linaro
+	url = https://gitlab.com/Linaro/openembedded/meta-linaro
+	branch = krogoth
+[submodule "magicphono/bitbake"]
+	path = magicphono/bitbake
+	url = https://github.com/openembedded/bitbake
+	branch = 1.30

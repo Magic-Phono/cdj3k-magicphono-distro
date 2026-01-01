@@ -1,0 +1,18 @@
+--- a/arch/arm64/kernel/setup.c	2019-10-11 16:34:26.625072000 +0900
++++ b/arch/arm64/kernel/setup.c	2019-10-22 19:22:25.816592699 +0900
+@@ -246,6 +246,15 @@ void __init setup_arch(char **cmdline_p)
+ 
+ 	setup_machine_fdt(__fdt_pointer);
+ 
++#ifdef CONFIG_PDJ
++	{
++		static char tmp_cmdline[COMMAND_LINE_SIZE] __initdata;
++		strcat(tmp_cmdline, "isolcpus=1 nohz_full=1 rcu_nocbs=1 irqaffinity=0,2-5 ");
++		strcat(tmp_cmdline, boot_command_line);
++		strlcpy(boot_command_line, tmp_cmdline, COMMAND_LINE_SIZE);
++	}
++#endif
++
+ 	parse_early_param();
+ 
+ 	/*

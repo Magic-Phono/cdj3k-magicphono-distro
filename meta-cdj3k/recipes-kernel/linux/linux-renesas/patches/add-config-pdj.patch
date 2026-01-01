@@ -1,0 +1,33 @@
+--- a/dev/null	2019-11-11 09:48:12.970393014 +0900
++++ b/arch/arm64/Kconfig.pdj	2019-11-11 15:21:06.530926663 +0900
+@@ -0,0 +1,20 @@
++#
++# Pioneer DJ modified
++#
++menuconfig PDJ
++	bool "Pioneer DJ project support"
++	default y
++	help
++	  support Pioneer DJ project.
++	  Refer to macro #ifdef CONFIG_PDJ
++
++if PDJ
++
++config OBSERVE_JUCE_ALSA
++	bool "Observe JUCE ALSA thread time"
++	help
++	  Trace off if JUCE ALSA thread _poll time over.
++	  This option need FTRACE and others.
++
++endif # PDJ
++
+
+--- a/arch/arm64/Kconfig	2018-11-21 14:37:47.626081000 +0900
++++ b/arch/arm64/Kconfig	2018-11-21 16:56:06.000000000 +0900
+@@ -1066,3 +1066,6 @@ source "arch/arm64/crypto/Kconfig"
+ endif
+ 
+ source "lib/Kconfig"
++
++source "arch/arm64/Kconfig.pdj"
++

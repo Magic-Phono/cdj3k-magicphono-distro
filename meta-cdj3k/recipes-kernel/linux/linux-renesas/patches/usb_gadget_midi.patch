@@ -1,0 +1,279 @@
+--- a/drivers/usb/gadget/function/f_midi.c	2018-11-27 18:10:37.000000000 +0900
++++ b/drivers/usb/gadget/function/f_midi.c	2019-07-02 11:46:40.138575885 +0900
+@@ -97,6 +97,7 @@ struct f_midi {
+ 	/* This fifo is used as a buffer ring for pre-allocated IN usb_requests */
+ 	DECLARE_KFIFO_PTR(in_req_fifo, struct usb_request *);
+ 	spinlock_t transmit_lock;
++	spinlock_t tasklet_transmit_lock;				/*2019.02.21*/
+ 	unsigned int in_last_port;
+ 
+ 	struct gmidi_in_port	in_ports_array[/* in_ports */];
+@@ -140,7 +141,7 @@ static struct usb_interface_descriptor m
+ 	.bLength =		USB_DT_INTERFACE_SIZE,
+ 	.bDescriptorType =	USB_DT_INTERFACE,
+ 	/* .bInterfaceNumber =	DYNAMIC */
+-	.bNumEndpoints =	2,
++	.bNumEndpoints =	1,//2
+ 	.bInterfaceClass =	USB_CLASS_AUDIO,
+ 	.bInterfaceSubClass =	USB_SUBCLASS_MIDISTREAMING,
+ 	/* .iInterface =	DYNAMIC */
+@@ -155,22 +156,22 @@ static struct usb_ms_header_descriptor m
+ 	/* .wTotalLength =	DYNAMIC */
+ };
+ 
+-/* B.5.1  Standard Bulk OUT Endpoint Descriptor */
++/* B.5.1  Standard Bulk OUT Endpoint Descriptor * いらない
+ static struct usb_endpoint_descriptor bulk_out_desc = {
+ 	.bLength =		USB_DT_ENDPOINT_AUDIO_SIZE,
+ 	.bDescriptorType =	USB_DT_ENDPOINT,
+ 	.bEndpointAddress =	USB_DIR_OUT,
+ 	.bmAttributes =		USB_ENDPOINT_XFER_BULK,
+-};
++};*/
+ 
+-/* B.5.2  Class-specific MS Bulk OUT Endpoint Descriptor */
++/* B.5.2  Class-specific MS Bulk OUT Endpoint Descriptor * いらない
+ static struct usb_ms_endpoint_descriptor_16 ms_out_desc = {
+-	/* .bLength =		DYNAMIC */
++	* .bLength =		DYNAMIC *
+ 	.bDescriptorType =	USB_DT_CS_ENDPOINT,
+ 	.bDescriptorSubtype =	USB_MS_GENERAL,
+-	/* .bNumEmbMIDIJack =	DYNAMIC */
+-	/* .baAssocJackID =	DYNAMIC */
+-};
++	* .bNumEmbMIDIJack =	DYNAMIC *
++	* .baAssocJackID =	DYNAMIC *
++};*/
+ 
+ /* B.6.1  Standard Bulk IN Endpoint Descriptor */
+ static struct usb_endpoint_descriptor bulk_in_desc = {
+@@ -194,7 +195,7 @@ static struct usb_ms_endpoint_descriptor
+ #define STRING_FUNC_IDX			0
+ 
+ static struct usb_string midi_string_defs[] = {
+-	[STRING_FUNC_IDX].s = "MIDI function",
++	[STRING_FUNC_IDX].s = "CDJ-3000 MIDI",
+ 	{  } /* end of list */
+ };
+ 
+@@ -347,7 +348,7 @@ static int f_midi_start_ep(struct f_midi
+ static int f_midi_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ {
+ 	struct f_midi *midi = func_to_midi(f);
+-	unsigned i;
++//	unsigned i;
+ 	int err;
+ 
+ 	/* we only set alt for MIDIStreaming interface */
+@@ -358,9 +359,9 @@ static int f_midi_set_alt(struct usb_fun
+ 	if (err)
+ 		return err;
+ 
+-	err = f_midi_start_ep(midi, f, midi->out_ep);
+-	if (err)
+-		return err;
++//	err = f_midi_start_ep(midi, f, midi->out_ep);
++//	if (err)
++//		return err;
+ 
+ 	/* pre-allocate write usb requests to use on f_midi_transmit. */
+ 	while (kfifo_avail(&midi->in_req_fifo)) {
+@@ -376,7 +377,7 @@ static int f_midi_set_alt(struct usb_fun
+ 		kfifo_put(&midi->in_req_fifo, req);
+ 	}
+ 
+-	/* allocate a bunch of read buffers and queue them all at once. */
++	/* allocate a bunch of read buffers and queue them all at once. * いらない
+ 	for (i = 0; i < midi->qlen && err == 0; i++) {
+ 		struct usb_request *req =
+ 			midi_alloc_ep_req(midi->out_ep, midi->buflen);
+@@ -392,7 +393,7 @@ static int f_midi_set_alt(struct usb_fun
+ 			free_ep_req(midi->out_ep, req);
+ 			return err;
+ 		}
+-	}
++	}*/
+ 
+ 	return 0;
+ }
+@@ -410,7 +411,7 @@ static void f_midi_disable(struct usb_fu
+ 	 * all our completion handlers free their requests in this case.
+ 	 */
+ 	usb_ep_disable(midi->in_ep);
+-	usb_ep_disable(midi->out_ep);
++//	usb_ep_disable(midi->out_ep);
+ 
+ 	/* release IN requests */
+ 	while (kfifo_get(&midi->in_req_fifo, &req))
+@@ -663,7 +664,13 @@ static void f_midi_transmit(struct f_mid
+ 	if (!ep || !ep->enabled)
+ 		goto drop_out;
+ 
++#ifdef CONFIG_PDJ
++	if (!spin_trylock_irqsave(&midi->transmit_lock, flags)) {
++		goto drop_out;
++	}
++#else
+ 	spin_lock_irqsave(&midi->transmit_lock, flags);
++#endif
+ 
+ 	do {
+ 		ret = f_midi_do_transmit(midi, ep);
+@@ -680,11 +687,42 @@ static void f_midi_transmit(struct f_mid
+ drop_out:
+ 	f_midi_drop_out_substreams(midi);
+ }
++/*!
++********************************************************************************
++********************************************************************************
++*/
++static void f_midi_transmit_tasklet(struct f_midi *midi)
++{
++	struct usb_ep *ep = midi->in_ep;
++	int ret;
++	unsigned long flags;
++
++	/* We only care about USB requests if IN endpoint is enabled */
++	if (!ep || !ep->enabled)
++		goto drop_out;
++
++	spin_lock_irqsave(&midi->tasklet_transmit_lock, flags);
++
++	do {
++		ret = f_midi_do_transmit(midi, ep);
++		if (ret < 0) {
++			spin_unlock_irqrestore(&midi->tasklet_transmit_lock, flags);
++			goto drop_out;
++		}
++	} while (ret);
++
++	spin_unlock_irqrestore(&midi->tasklet_transmit_lock, flags);
++
++	return;
++
++drop_out:
++	f_midi_drop_out_substreams(midi);
++}
+ 
+ static void f_midi_in_tasklet(unsigned long data)
+ {
+ 	struct f_midi *midi = (struct f_midi *) data;
+-	f_midi_transmit(midi);
++	f_midi_transmit_tasklet(midi);
+ }
+ 
+ static int f_midi_in_open(struct snd_rawmidi_substream *substream)
+@@ -761,7 +799,7 @@ static struct snd_rawmidi_ops gmidi_in_o
+ 	.trigger = f_midi_in_trigger,
+ };
+ 
+-static struct snd_rawmidi_ops gmidi_out_ops = {
++static const struct snd_rawmidi_ops gmidi_out_ops = {
+ 	.open = f_midi_out_open,
+ 	.close = f_midi_out_close,
+ 	.trigger = f_midi_out_trigger
+@@ -824,7 +862,7 @@ static int f_midi_register_card(struct f
+ 	 * It's an upside-down world being a gadget.
+ 	 */
+ 	snd_rawmidi_set_ops(rmidi, SNDRV_RAWMIDI_STREAM_OUTPUT, &gmidi_in_ops);
+-	snd_rawmidi_set_ops(rmidi, SNDRV_RAWMIDI_STREAM_INPUT, &gmidi_out_ops);
++//	snd_rawmidi_set_ops(rmidi, SNDRV_RAWMIDI_STREAM_INPUT, &gmidi_out_ops);
+ 
+ 	/* register it - we're ready to go */
+ 	err = snd_card_register(card);
+@@ -847,13 +885,13 @@ static int f_midi_bind(struct usb_config
+ {
+ 	struct usb_descriptor_header **midi_function;
+ 	struct usb_midi_in_jack_descriptor jack_in_ext_desc[MAX_PORTS];
+-	struct usb_midi_in_jack_descriptor jack_in_emb_desc[MAX_PORTS];
+-	struct usb_midi_out_jack_descriptor_1 jack_out_ext_desc[MAX_PORTS];
++//	struct usb_midi_in_jack_descriptor jack_in_emb_desc[MAX_PORTS];
++//	struct usb_midi_out_jack_descriptor_1 jack_out_ext_desc[MAX_PORTS];
+ 	struct usb_midi_out_jack_descriptor_1 jack_out_emb_desc[MAX_PORTS];
+ 	struct usb_composite_dev *cdev = c->cdev;
+ 	struct f_midi *midi = func_to_midi(f);
+ 	struct usb_string *us;
+-	int status, n, jack = 1, i = 0;
++	int status, n, jack = 0x31, i = 0;
+ 
+ 	midi->gadget = cdev->gadget;
+ 	tasklet_init(&midi->tasklet, f_midi_in_tasklet, (unsigned long) midi);
+@@ -890,9 +928,9 @@ static int f_midi_bind(struct usb_config
+ 	if (!midi->in_ep)
+ 		goto fail;
+ 
+-	midi->out_ep = usb_ep_autoconfig(cdev->gadget, &bulk_out_desc);
+-	if (!midi->out_ep)
+-		goto fail;
++//	midi->out_ep = usb_ep_autoconfig(cdev->gadget, &bulk_out_desc);
++//	if (!midi->out_ep)
++//		goto fail;
+ 
+ 	/* allocate temporary function list */
+ 	midi_function = kcalloc((MAX_PORTS * 4) + 9, sizeof(*midi_function),
+@@ -914,8 +952,8 @@ static int f_midi_bind(struct usb_config
+ 	midi_function[i++] = (struct usb_descriptor_header *) &ms_interface_desc;
+ 
+ 	/* calculate the header's wTotalLength */
+-	n = USB_DT_MS_HEADER_SIZE
+-		+ (midi->in_ports + midi->out_ports) *
++	n = USB_DT_MS_HEADER_SIZE + 12
++		+ (midi->in_ports + 0/*midi->out_ports*/) *
+ 			(USB_DT_MIDI_IN_SIZE + USB_DT_MIDI_OUT_SIZE(1));
+ 	ms_header_desc.wTotalLength = cpu_to_le16(n);
+ 
+@@ -949,7 +987,7 @@ static int f_midi_bind(struct usb_config
+ 		ms_in_desc.baAssocJackID[n] = out_emb->bJackID;
+ 	}
+ 
+-	/* configure the external OUT jacks, each linked to an embedded IN jack */
++	/* configure the external OUT jacks, each linked to an embedded IN jack */ /* いらない
+ 	for (n = 0; n < midi->out_ports; n++) {
+ 		struct usb_midi_in_jack_descriptor *in_emb = &jack_in_emb_desc[n];
+ 		struct usb_midi_out_jack_descriptor_1 *out_ext = &jack_out_ext_desc[n];
+@@ -973,20 +1011,20 @@ static int f_midi_bind(struct usb_config
+ 		out_ext->pins[0].baSourcePin =	1;
+ 		midi_function[i++] = (struct usb_descriptor_header *) out_ext;
+ 
+-		/* link it to the endpoint */
++		* link it to the endpoint *
+ 		ms_out_desc.baAssocJackID[n] = in_emb->bJackID;
+-	}
++	}*/
+ 
+ 	/* configure the endpoint descriptors ... */
+-	ms_out_desc.bLength = USB_DT_MS_ENDPOINT_SIZE(midi->in_ports);
+-	ms_out_desc.bNumEmbMIDIJack = midi->in_ports;
++//	ms_out_desc.bLength = USB_DT_MS_ENDPOINT_SIZE(midi->in_ports);
++//	ms_out_desc.bNumEmbMIDIJack = midi->in_ports;
+ 
+ 	ms_in_desc.bLength = USB_DT_MS_ENDPOINT_SIZE(midi->out_ports);
+ 	ms_in_desc.bNumEmbMIDIJack = midi->out_ports;
+ 
+ 	/* ... and add them to the list */
+-	midi_function[i++] = (struct usb_descriptor_header *) &bulk_out_desc;
+-	midi_function[i++] = (struct usb_descriptor_header *) &ms_out_desc;
++//	midi_function[i++] = (struct usb_descriptor_header *) &bulk_out_desc;
++//	midi_function[i++] = (struct usb_descriptor_header *) &ms_out_desc;
+ 	midi_function[i++] = (struct usb_descriptor_header *) &bulk_in_desc;
+ 	midi_function[i++] = (struct usb_descriptor_header *) &ms_in_desc;
+ 	midi_function[i++] = NULL;
+@@ -1003,7 +1041,7 @@ static int f_midi_bind(struct usb_config
+ 
+ 	if (gadget_is_dualspeed(c->cdev->gadget)) {
+ 		bulk_in_desc.wMaxPacketSize = cpu_to_le16(512);
+-		bulk_out_desc.wMaxPacketSize = cpu_to_le16(512);
++//		bulk_out_desc.wMaxPacketSize = cpu_to_le16(512);
+ 		f->hs_descriptors = usb_copy_descriptors(midi_function);
+ 		if (!f->hs_descriptors)
+ 			goto fail_f_midi;
+@@ -1269,7 +1307,8 @@ static struct usb_function *f_midi_alloc
+ 		goto setup_fail;
+ 
+ 	spin_lock_init(&midi->transmit_lock);
+-
++	spin_lock_init(&midi->tasklet_transmit_lock);		//2019.02.21	//transmit_lock);
++printk("[%s] 19.02.21 ... add spin_lock tasklet_transmit_lock\n", __func__);
+ 	++opts->refcnt;
+ 	mutex_unlock(&opts->lock);
+ 

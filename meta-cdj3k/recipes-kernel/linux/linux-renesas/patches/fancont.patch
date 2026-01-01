@@ -1,0 +1,7 @@
+--- a/drivers/thermal/Makefile	2019-04-11 20:11:21.725542000 +0900
++++ b/drivers/thermal/Makefile	2019-04-15 19:22:06.766677387 +0900
+@@ -56,3 +56,4 @@ obj-$(CONFIG_TEGRA_SOCTHERM)	+= tegra/
+ obj-$(CONFIG_HISI_THERMAL)     += hisi_thermal.o
+ obj-$(CONFIG_MTK_THERMAL)	+= mtk_thermal.o
+ obj-$(CONFIG_GENERIC_ADC_THERMAL)	+= thermal-generic-adc.o
++obj-$(CONFIG_PDJ)	+= fancont.o

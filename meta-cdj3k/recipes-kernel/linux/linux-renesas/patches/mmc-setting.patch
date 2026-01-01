@@ -1,0 +1,108 @@
+--- a/drivers/mmc/core/host.c	2019-11-11 15:25:19.224092000 +0900
++++ b/drivers/mmc/core/host.c	2019-11-11 16:43:09.571983000 +0900
+@@ -362,6 +362,12 @@ again:
+ 
+ 	spin_lock(&mmc_host_lock);
+ 	err = ida_get_new(&mmc_host_ida, &host->index);
++#ifdef CONFIG_PDJ
++	if (host->index > 1) {
++		ida_remove(&mmc_host_ida, host->index);
++		host->index--;
++	}
++#endif
+ 	spin_unlock(&mmc_host_lock);
+ 
+ 	if (err == -EAGAIN) {
+
+--- a/drivers/mmc/core/core.c	2018-09-13 17:01:21.000000000 +0900
++++ b/drivers/mmc/core/core.c	2019-06-26 17:11:44.025319126 +0900
+@@ -1583,9 +1583,16 @@ int mmc_regulator_get_supply(struct mmc_
+ 	struct device *dev = mmc_dev(mmc);
+ 	int ret;
+ 
+-	mmc->supply.vmmc = devm_regulator_get_optional(dev, "vmmc");
+ 	mmc->supply.vqmmc = devm_regulator_get_optional(dev, "vqmmc");
+ 
++	if (IS_ERR(mmc->supply.vqmmc)) {
++		if (PTR_ERR(mmc->supply.vqmmc) == -EPROBE_DEFER)
++			return -EPROBE_DEFER;
++		dev_dbg(dev, "No vqmmc regulator found\n");
++	}
++
++	mmc->supply.vmmc = devm_regulator_get_optional(dev, "vmmc");
++
+ 	if (IS_ERR(mmc->supply.vmmc)) {
+ 		if (PTR_ERR(mmc->supply.vmmc) == -EPROBE_DEFER)
+ 			return -EPROBE_DEFER;
+@@ -1598,12 +1605,6 @@ int mmc_regulator_get_supply(struct mmc_
+ 			dev_warn(dev, "Failed getting OCR mask: %d\n", ret);
+ 	}
+ 
+-	if (IS_ERR(mmc->supply.vqmmc)) {
+-		if (PTR_ERR(mmc->supply.vqmmc) == -EPROBE_DEFER)
+-			return -EPROBE_DEFER;
+-		dev_dbg(dev, "No vqmmc regulator found\n");
+-	}
+-
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(mmc_regulator_get_supply);
+@@ -1831,6 +1832,30 @@ void mmc_power_up(struct mmc_host *host,
+ 	else if (__mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_120) == 0)
+ 		dev_dbg(mmc_dev(host), "Initial signal voltage of 1.2v\n");
+ 
++#ifdef CONFIG_PDJ
++	if (strcmp(host->parent->kobj.name, "ee100000.sd") == 0)
++	{
++		void __iomem *pfc_reg_addr = ioremap_nocache(0xe6060000, 0x400);
++
++		switch (host->ios.signal_voltage) {
++		case MMC_SIGNAL_VOLTAGE_180:
++			writel(~0xFFDAAAAA, pfc_reg_addr); /* PMMR */
++			wmb();
++			writel(0xFFDAAAAA, pfc_reg_addr + 0x334); /* DRVCTRL13 */
++			wmb();
++			break;
++		case MMC_SIGNAL_VOLTAGE_330:
++			writel(~0xFFDCCCCC, pfc_reg_addr); /* PMMR */
++			wmb();
++			writel(0xFFDCCCCC, pfc_reg_addr + 0x334); /* DRVCTRL13 */
++			wmb();
++		default:
++			break;
++		}
++		iounmap(pfc_reg_addr);
++	}
++#endif
++
+ 	/*
+ 	 * This delay should be sufficient to allow the power supply
+ 	 * to reach the minimum voltage.
+
+--- a/drivers/mmc/host/sh_mobile_sdhi.c	2018-09-13 17:01:21.000000000 +0900
++++ b/drivers/mmc/host/sh_mobile_sdhi.c	2019-06-26 17:13:35.033322991 +0900
+@@ -756,6 +756,24 @@ static int sh_mobile_sdhi_probe(struct p
+ 	struct tmio_mmc_dma *dma_priv;
+ 	const struct device_node *np = pdev->dev.of_node;
+ 	int tmp, drive_strength = 0;
++#ifdef CONFIG_PDJ
++	void __iomem *pfc_reg_addr;
++
++	pfc_reg_addr = ioremap_nocache(0xe6060000, 0x400);
++	writel(~0xFFDCCCCC, pfc_reg_addr); /* PMMR */
++	wmb();
++	writel(0xFFDCCCCC, pfc_reg_addr + 0x334); /* DRVCTRL13 */
++	wmb();
++	writel(~0xFFAAAACA, pfc_reg_addr); /* PMMR */
++	wmb();
++	writel(0xFFAAAACA, pfc_reg_addr + 0x338); /* DRVCTRL14 */
++	wmb();
++	writel(~0xAAAADFFF, pfc_reg_addr); /* PMMR */
++	wmb();
++	writel(0xAAAADFFF, pfc_reg_addr + 0x33c); /* DRVCTRL15 */
++	wmb();
++	iounmap(pfc_reg_addr);
++#endif
+ 
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+ 	if (!res)

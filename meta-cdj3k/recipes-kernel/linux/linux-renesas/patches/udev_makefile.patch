@@ -1,0 +1,7 @@
+--- a/fs/proc/Makefile	2018-12-06 10:25:40.000000000 +0900
++++ b/fs/proc/Makefile	2019-11-04 20:07:49.678086831 +0900
+@@ -31,3 +31,4 @@ proc-$(CONFIG_PROC_KCORE)	+= kcore.o
+ proc-$(CONFIG_PROC_VMCORE)	+= vmcore.o
+ proc-$(CONFIG_PRINTK)	+= kmsg.o
+ proc-$(CONFIG_PROC_PAGE_MONITOR)	+= page.o
++obj-$(CONFIG_PDJ)	+= udev_usb.o udev_usbctn.o udev_usbg.o udev_sd.o udev_sdctn.o udev_nfs.o

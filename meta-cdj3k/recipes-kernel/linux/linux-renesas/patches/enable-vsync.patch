@@ -1,0 +1,237 @@
+--- a/include/uapi/drm/rcar_du_drm.h	2020-06-04 15:19:44.819125940 +0900
++++ b/include/uapi/drm/rcar_du_drm.h	2020-05-29 16:47:07.000000000 +0900
+@@ -27,9 +27,19 @@ struct rcar_du_screen_shot {
+ 	unsigned int	height;
+ };
+ 
++/* DRM_RCAR_DU_PAGE_FLIP */
++struct rcar_du_page_flip {
++	__u32 crtc_id;
++	__u32 fb_id;
++	__u32 flags;
++	__u32 sequence;
++	__u64 user_data;
++};
++
+ /* rcar-du + vspd specific ioctls */
+ #define DRM_RCAR_DU_SET_VMUTE		0
+ #define DRM_RCAR_DU_SCRSHOT		4
++#define DRM_RCAR_DU_PAGE_FLIP		8
+ 
+ #define DRM_IOCTL_RCAR_DU_SET_VMUTE \
+ 	DRM_IOW(DRM_COMMAND_BASE + DRM_RCAR_DU_SET_VMUTE, \
+@@ -39,4 +49,8 @@ struct rcar_du_screen_shot {
+ 	DRM_IOW(DRM_COMMAND_BASE + DRM_RCAR_DU_SCRSHOT, \
+ 		struct rcar_du_screen_shot)
+ 
++#define DRM_IOCTL_RCAR_DU_PAGE_FLIP \
++	DRM_IOW(DRM_COMMAND_BASE + DRM_RCAR_DU_PAGE_FLIP, \
++		struct rcar_du_page_flip)
++
+ #endif /* __RCAR_DU_DRM_H__ */
+
+--- a/drivers/gpu/drm/rcar-du/rcar_du_kms.h	2020-06-04 15:19:41.491125972 +0900
++++ b/drivers/gpu/drm/rcar-du/rcar_du_kms.h	2020-05-29 15:53:25.000000000 +0900
+@@ -38,4 +38,6 @@ int rcar_du_dumb_create(struct drm_file
+ 			struct drm_mode_create_dumb *args);
+ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc);
+ 
++int rcar_du_page_flip_ioctl(struct drm_device *dev, void *data,
++			    struct drm_file *file_priv);
+ #endif /* __RCAR_DU_KMS_H__ */
+
+--- a/drivers/gpu/drm/rcar-du/rcar_du_kms.c	2020-06-04 15:19:41.491125972 +0900
++++ b/drivers/gpu/drm/rcar-du/rcar_du_kms.c	2020-06-03 10:46:17.000000000 +0900
+@@ -18,6 +18,7 @@
+ #include <drm/drm_crtc_helper.h>
+ #include <drm/drm_fb_cma_helper.h>
+ #include <drm/drm_gem_cma_helper.h>
++#include <drm/rcar_du_drm.h>
+ 
+ #include <linux/of_graph.h>
+ #include <linux/wait.h>
+@@ -730,3 +731,149 @@ int rcar_du_modeset_init(struct rcar_du_
+ 
+ 	return 0;
+ }
++
++int rcar_du_page_flip_ioctl(struct drm_device *dev, void *data,
++		struct drm_file *file_priv)
++{
++	struct rcar_du_page_flip *page_flip = (struct rcar_du_page_flip *)data;
++	struct drm_mode_object *obj;
++	struct drm_crtc *crtc;
++	struct rcar_du_crtc *rcrtc;
++	struct drm_framebuffer *fb = NULL;
++	struct drm_pending_vblank_event *e = NULL;
++	u32 target_vblank = page_flip->sequence;
++	int ret = -EINVAL;
++
++	if (!drm_core_check_feature(dev, DRIVER_MODESET))
++		return -EINVAL;
++
++	if (page_flip->flags & ~DRM_MODE_PAGE_FLIP_FLAGS)
++		return -EINVAL;
++
++	if (page_flip->sequence != 0 && !(page_flip->flags & DRM_MODE_PAGE_FLIP_TARGET))
++		return -EINVAL;
++
++	/* Only one of the DRM_MODE_PAGE_FLIP_TARGET_ABSOLUTE/RELATIVE flags
++	 * can be specified
++	 */
++	if ((page_flip->flags & DRM_MODE_PAGE_FLIP_TARGET) == DRM_MODE_PAGE_FLIP_TARGET)
++		return -EINVAL;
++
++	if ((page_flip->flags & DRM_MODE_PAGE_FLIP_ASYNC) && !dev->mode_config.async_page_flip)
++		return -EINVAL;
++
++	obj = drm_mode_object_find(dev, page_flip->crtc_id,
++					DRM_MODE_OBJECT_CRTC);
++	if (!obj)
++		return -ENOENT;
++
++	crtc = obj_to_crtc(obj);
++	rcrtc = to_rcar_crtc(crtc);
++
++	if (crtc->funcs->page_flip_target) {
++		u32 current_vblank;
++		int r;
++
++		r = drm_crtc_vblank_get(crtc);
++		if (r)
++			return r;
++
++		current_vblank = drm_crtc_vblank_count(crtc);
++
++		switch (page_flip->flags & DRM_MODE_PAGE_FLIP_TARGET) {
++		case DRM_MODE_PAGE_FLIP_TARGET_ABSOLUTE:
++			if ((int)(target_vblank - current_vblank) > 1) {
++				DRM_DEBUG("Invalid absolute flip target %u, "
++					  "must be <= %u\n", target_vblank,
++					  current_vblank + 1);
++				drm_crtc_vblank_put(crtc);
++				return -EINVAL;
++			}
++			break;
++		case DRM_MODE_PAGE_FLIP_TARGET_RELATIVE:
++			if (target_vblank != 0 && target_vblank != 1) {
++				DRM_DEBUG("Invalid relative flip target %u, "
++					  "must be 0 or 1\n", target_vblank);
++				drm_crtc_vblank_put(crtc);
++				return -EINVAL;
++			}
++			target_vblank += current_vblank;
++			break;
++		default:
++			target_vblank = current_vblank +
++				!(page_flip->flags & DRM_MODE_PAGE_FLIP_ASYNC);
++			break;
++		}
++	} else if (crtc->funcs->page_flip == NULL ||
++		   (page_flip->flags & DRM_MODE_PAGE_FLIP_TARGET)) {
++		return -EINVAL;
++	}
++
++	drm_modeset_lock_crtc(crtc, crtc->primary);
++	if (crtc->primary->fb == NULL) {
++		/* The framebuffer is currently unbound, presumably
++		 * due to a hotplug event, that userspace has not
++		 * yet discovered.
++		 */
++		ret = -EBUSY;
++		goto out;
++	}
++
++	fb = drm_framebuffer_lookup(dev, page_flip->fb_id);
++	if (!fb) {
++		ret = -ENOENT;
++		goto out;
++	}
++
++	if (crtc->primary->fb->pixel_format != fb->pixel_format) {
++		DRM_DEBUG_KMS("Page flip is not allowed to change frame buffer format.\n");
++		ret = -EINVAL;
++		goto out;
++	}
++
++	if (page_flip->flags & DRM_MODE_PAGE_FLIP_EVENT) {
++		e = kzalloc(sizeof *e, GFP_KERNEL);
++		if (!e) {
++			ret = -ENOMEM;
++			goto out;
++		}
++		e->event.base.type = DRM_EVENT_FLIP_COMPLETE;
++		e->event.base.length = sizeof(e->event);
++		e->event.user_data = page_flip->user_data;
++		ret = drm_event_reserve_init(dev, file_priv, &e->base, &e->event.base);
++		if (ret) {
++			kfree(e);
++			goto out;
++		}
++	}
++
++	crtc->primary->old_fb = crtc->primary->fb;
++	if (crtc->funcs->page_flip_target)
++		ret = crtc->funcs->page_flip_target(crtc, fb, e,
++						    page_flip->flags,
++						    target_vblank);
++	else
++		ret = crtc->funcs->page_flip(crtc, fb, e, page_flip->flags);
++	if (ret) {
++		if (page_flip->flags & DRM_MODE_PAGE_FLIP_EVENT)
++			drm_event_cancel_free(dev, &e->base);
++		/* Keep the old fb, don't unref it. */
++		crtc->primary->old_fb = NULL;
++	} else {
++		crtc->primary->fb = fb;
++		/* Unref only the old framebuffer. */
++		fb = NULL;
++	}
++
++out:
++	if (ret && crtc->funcs->page_flip_target)
++		drm_crtc_vblank_put(crtc);
++	if (fb)
++		drm_framebuffer_unreference(fb);
++	if (crtc->primary->old_fb)
++		drm_framebuffer_unreference(crtc->primary->old_fb);
++	crtc->primary->old_fb = NULL;
++	drm_modeset_unlock_crtc(crtc);
++
++	return ret;
++}
+
+--- a/drivers/gpu/drm/rcar-du/rcar_du_drv.c	2020-06-04 14:23:16.503158254 +0900
++++ b/drivers/gpu/drm/rcar-du/rcar_du_drv.c	2020-06-04 17:20:36.387056784 +0900
+@@ -377,6 +377,8 @@ static const struct drm_ioctl_desc rcar_
+ 		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+ 	DRM_IOCTL_DEF_DRV(RCAR_DU_SCRSHOT, rcar_du_vsp_write_back,
+ 		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
++	DRM_IOCTL_DEF_DRV(RCAR_DU_PAGE_FLIP, rcar_du_page_flip_ioctl,
++		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+ };
+ 
+ static const struct file_operations rcar_du_fops = {
+
+--- a/drivers/gpu/drm/drm_atomic_helper.c	2020-06-15 20:36:26.965881001 +0900
++++ b/drivers/gpu/drm/drm_atomic_helper.c	2020-06-15 20:37:35.933880343 +0900
+@@ -2817,7 +2817,11 @@ int drm_atomic_helper_connector_dpms(str
+ 	struct drm_crtc *crtc;
+ 	struct drm_connector *tmp_connector;
+ 	int ret;
++#ifdef CONFIG_PDJ
++	bool active = true;
++#else
+ 	bool active = false;
++#endif
+ 	int old_mode = connector->dpms;
+ 
+ 	if (mode != DRM_MODE_DPMS_ON)
+@@ -2852,6 +2856,7 @@ retry:
+ 			break;
+ 		}
+ 	}
++
+ 	crtc_state->active = active;
+ 
+ 	ret = drm_atomic_commit(state);

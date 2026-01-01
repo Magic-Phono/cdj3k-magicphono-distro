@@ -1,0 +1,52 @@
+--- a/include/env_default.h	2018-09-13 17:01:21.565064000 +0900
++++ b/include/env_default.h	2019-11-21 14:15:52.699918879 +0900
+@@ -31,9 +31,39 @@ const uchar default_environment[] = {
+ #ifdef	CONFIG_BOOTARGS
+ 	"bootargs="	CONFIG_BOOTARGS			"\0"
+ #endif
++#ifdef	CONFIG_BOOTARGS_SD
++	"bootargs_sd="	CONFIG_BOOTARGS_SD			"\0"
++#endif
++#ifdef	CONFIG_BOOTARGS_EMMC
++	"bootargs_emmc="	CONFIG_BOOTARGS_EMMC			"\0"
++#endif
+ #ifdef	CONFIG_BOOTCOMMAND
+ 	"bootcmd="	CONFIG_BOOTCOMMAND		"\0"
+ #endif
++#ifdef	CONFIG_BOOTCOMMAND_SD
++	"bootcmd_sd="	CONFIG_BOOTCOMMAND_SD		"\0"
++#endif
++#ifdef	CONFIG_BOOTCOMMAND_EMMC
++	"bootcmd_emmc="	CONFIG_BOOTCOMMAND_EMMC		"\0"
++#endif
++#ifdef	CONFIG_BANK_PARTITION
++	"part="	CONFIG_BANK_PARTITION	"\0"
++#endif
++#ifdef	CONFIG_KERNEL_BANK
++	"kernel_bank="	CONFIG_KERNEL_BANK	"\0"
++#endif
++#ifdef	CONFIG_BOOT_TYPE
++	"boot_type="	CONFIG_BOOT_TYPE	"\0"
++#endif
++#ifdef	CONFIG_BOOTI_CMD
++	"booti_cmd=" CONFIG_BOOTI_CMD		"\0"
++#endif
++#ifdef	CONFIG_DTB
++	"dtb=" CONFIG_DTB		"\0"
++#endif
++#ifdef	CONFIG_SERIAL_NUMBER
++	"serial_number=" CONFIG_SERIAL_NUMBER	"\0"
++#endif
+ #ifdef	CONFIG_RAMBOOTCOMMAND
+ 	"ramboot="	CONFIG_RAMBOOTCOMMAND		"\0"
+ #endif
+@@ -49,6 +79,9 @@ const uchar default_environment[] = {
+ #ifdef	CONFIG_LOADS_ECHO
+ 	"loads_echo="	__stringify(CONFIG_LOADS_ECHO)	"\0"
+ #endif
++#ifdef	CONFIG_ETHACT
++	"ethact="	CONFIG_ETHACT	"\0"
++#endif
+ #ifdef	CONFIG_ETHADDR
+ 	"ethaddr="	__stringify(CONFIG_ETHADDR)	"\0"
+ #endif

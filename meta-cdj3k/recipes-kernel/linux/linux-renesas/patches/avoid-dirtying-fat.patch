@@ -1,0 +1,28 @@
+--- a/fs/fat/inode.c	2018-12-10 15:54:29.070529000 +0900
++++ b/fs/fat/inode.c	2018-12-11 12:15:27.977080000 +0900
+@@ -672,13 +672,15 @@ static void fat_set_state(struct super_b
+ 
+ 	bh = sb_bread(sb, 0);
+ 	if (bh == NULL) {
++#ifndef CONFIG_PDJ
+ 		fat_msg(sb, KERN_ERR, "unable to read boot sector "
+ 			"to mark fs as dirty");
++#endif
+ 		return;
+ 	}
+ 
+ 	b = (struct fat_boot_sector *) bh->b_data;
+-
++#ifndef CONFIG_PDJ
+ 	if (sbi->fat_bits == 32) {
+ 		if (set)
+ 			b->fat32.state |= FAT_STATE_DIRTY;
+@@ -690,7 +692,7 @@ static void fat_set_state(struct super_b
+ 		else
+ 			b->fat16.state &= ~FAT_STATE_DIRTY;
+ 	}
+-
++#endif
+ 	mark_buffer_dirty(bh);
+ 	sync_dirty_buffer(bh);
+ 	brelse(bh);

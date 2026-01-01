@@ -1,0 +1,17 @@
+--- a/arch/arm/cpu/armv8/rcar_gen3/pfc-r8a7796.c	2019-05-15 15:44:57.477564000 +0900
++++ b/arch/arm/cpu/armv8/rcar_gen3/pfc-r8a7796.c	2019-05-15 16:16:48.465524729 +0900
+@@ -5148,10 +5148,10 @@ static struct pinmux_cfg_reg pinmux_conf
+ 		0, 0,
+ 		0, 0,
+ 		0, 0,
+-		GP_6_3_IN, GP_6_3_OUT,
+-		GP_6_2_IN, GP_6_2_OUT,
+-		GP_6_1_IN, GP_6_1_OUT,
+-		GP_6_0_IN, GP_6_0_OUT,
++		GP_7_3_IN, GP_7_3_OUT,
++		GP_7_2_IN, GP_7_2_OUT,
++		GP_7_1_IN, GP_7_1_OUT,
++		GP_7_0_IN, GP_7_0_OUT,
+ 		}
+ 	},
+ 	{ },

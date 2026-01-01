@@ -1,0 +1,119 @@
+--- a/plat/renesas/rcar/ddr/ddr_b/boot_init_dram_config.c	2018-09-21 15:49:39.376863000 +0900
++++ b/plat/renesas/rcar/ddr/ddr_b/boot_init_dram_config.c	2018-09-25 10:24:55.893597311 +0900
+@@ -8,11 +8,11 @@
+  *	NUMBER OF BOARD CONFIGRATION
+  *	PLEASE DEFINE
+  ******************************************************************************/
+-#define BOARDNUM 16
++#define BOARDNUM 2
+ /*******************************************************************************
+  *	PLEASE SET board number or board judge function
+  ******************************************************************************/
+-#define BOARD_JUDGE_AUTO
++/* #define BOARD_JUDGE_AUTO */
+ #ifdef BOARD_JUDGE_AUTO
+ static uint32_t _board_judge(void);
+ static uint32_t boardcnf_get_brd_type(void) {
+@@ -27,7 +27,7 @@ static uint32_t boardcnf_get_brd_type(vo
+ /*******************************************************************************
+  *	Set DRAM ODT , VREFca , Derating  condtition
+  ******************************************************************************/
+-//#define _def_LPDDR4_ODT	0x36	// MR11
++#define _def_LPDDR4_ODT	0x36	// MR11
+ //#define _def_LPDDR4_VREFCA	0x11	// MR12
+ //#define JS2_DERATE		1	// 1: Temperature Derating
+ 
+@@ -155,6 +155,60 @@ static const struct _boardcnf boardcnfs[
+ 	}
+ },
+ /*
++ * boardcnf[1] PDJ
++ */
++{
++	0x03,		/* phyvalid */
++	0x01,		/* dbi_en */
++	0x02c0,		/* cacs_dly */
++	0,		/* cacs_dly_adj */
++	0x0300,		/* dqdm_dly_w */
++	0x00a0,		/* dqdm_dly_r */
++	{
++/*ch[0]*/	{
++/*ddr_density[]*/	{ 0x02, 0xff },
++/*ca_swap*/		0x00543210U,
++/*dqs_swap*/		0x3201U,
++/*dq_swap[]*/		{ 0x01672543, 0x45361207, 0x45632107, 0x60715234 },
++/*dm_swap[]*/		{ 0x08, 0x08, 0x08, 0x08 },
++/*wdqlvl_patt[]*/	WDQLVL_PAT,
++/*cacs_adj*/		{ 0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0 },
++/*dm_adj_w*/		{ 0, 0, 0, 0 },
++/*dqdm_adj_w*/		{ 0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0 },
++/*dm_adj_r*/		{ 0, 0, 0, 0 },
++/*dqdm_adj_r*/		{ 0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0 }
++		},
++/*ch[1]*/	{
++/*ddr_density[]*/	{ 0x02, 0xff },
++/*ca_swap*/		0x00543210U,
++/*dqs_swap*/		0x3210U,
++/*dq_swap[]*/		{ 0x01672543, 0x45361207, 0x45632107, 0x60715234 },
++/*dm_swap[]*/		{ 0x08, 0x08, 0x08, 0x08 },
++/*wdqlvl_patt[]*/	WDQLVL_PAT,
++/*cacs_adj*/		{ 0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0 },
++/*dm_adj_w*/		{ 0, 0, 0, 0 },
++/*dqdm_adj_w*/		{ 0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0 },
++/*dm_adj_r*/		{ 0, 0, 0, 0 },
++/*dqdm_adj_r*/		{ 0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0,
++			  0, 0, 0, 0, 0, 0, 0, 0 }
++		}
++	}
++}
++#ifdef BOARD_JUDGE_AUTO
++/*
+  * boardcnf[1] RENESAS KRIEK board with M3-W/SoC
+  */
+ {
+@@ -1311,6 +1365,7 @@ static const struct _boardcnf boardcnfs[
+ 		}
+ 	}
+ }
++#endif // BOARD_JUDGE_AUTO
+ };
+ 
+ /*******************************************************************************
+@@ -1351,7 +1406,7 @@ void boardcnf_get_brd_clk(uint32_t brd,
+ /*
+ //DDRxxxx (judge_ by md19,17) : 0
+ //DDR3200 (md19,17==0,0) : 3200
+-//DDR2800 (md19,17==0,1) : 2800
++//DDR2800 (md19,17==0,1) : 3200
+ //DDR2400 (md19,17==1,0) : 2400
+ //DDR1600 (md19,17==1,1) : 1600
+ */
+@@ -1361,7 +1416,7 @@ void boardcnf_get_ddr_mbps(uint32_t brd,
+ 	md = (md|(md>>1))&0x3;
+ 	switch(md){
+ 		case 0x0 : *mbps = 3200; *div = 1; break;
+-		case 0x1 : *mbps = 2800; *div = 1; break;
++		case 0x1 : *mbps = 3200; *div = 1; break;
+ 		case 0x2 : *mbps = 2400; *div = 1; break;
+ 		case 0x3 : *mbps = 1600; *div = 1; break;
+ 	}
+@@ -1575,4 +1630,6 @@ static uint32_t _board_judge(void) {
+ 
+ 	return brd;
+ }
++#else // BOARD_JUDGE_AUTO
++#define BIT22 (1<<22)
+ #endif

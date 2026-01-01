@@ -1,0 +1,26 @@
+--- a/tools/env/fw_env.config	2018-10-17 15:26:13.261101000 +0900
++++ b/tools/env/fw_env.config	2018-09-28 20:20:42.000000000 +0900
+@@ -5,21 +5,6 @@
+ # Futhermore, if the Flash sector size is ommitted, this value is assumed to
+ # be the same as the Environment size, which is valid for NOR and SPI-dataflash
+ 
+-# NOR example
+-# MTD device name	Device offset	Env. size	Flash sector size	Number of sectors
+-/dev/mtd1		0x0000		0x4000		0x4000
+-/dev/mtd2		0x0000		0x4000		0x4000
++# device name		Device offset	Env. size	Flash sector size	Number of sectors
++/dev/mmcblk0boot1	0x007e0000	0x20000
+ 
+-# MTD SPI-dataflash example
+-# MTD device name	Device offset	Env. size	Flash sector size	Number of sectors
+-#/dev/mtd5		0x4200		0x4200
+-#/dev/mtd6		0x4200		0x4200
+-
+-# NAND example
+-#/dev/mtd0		0x4000		0x4000		0x20000			2
+-
+-# Block device example
+-#/dev/mmcblk0		0xc0000		0x20000
+-
+-# VFAT example
+-#/boot/uboot.env	0x0000          0x4000

@@ -1,0 +1,381 @@
+--- a/include/linux/usb/hcd.h	2019-05-07 11:03:41.000000000 +0900
++++ b/include/linux/usb/hcd.h	2019-09-26 19:13:07.362862831 +0900
+@@ -25,7 +25,11 @@
+ #include <linux/interrupt.h>
+ #include <linux/idr.h>
+ 
++#ifdef CONFIG_PDJ
++#define MAX_TOPO_LEVEL		1
++#else
+ #define MAX_TOPO_LEVEL		6
++#endif
+ 
+ /* This file contains declarations of usbcore internals that are mostly
+  * used or exposed by Host Controller Drivers.
+
+--- a/drivers/usb/core/hub.c	2020-07-02 15:00:14.335813768 +0900
++++ b/drivers/usb/core/hub.c	2020-07-16 14:38:48.821394932 +0900
+@@ -99,6 +99,199 @@ EXPORT_SYMBOL_GPL(ehci_cf_port_reset_rws
+ #define HUB_DEBOUNCE_STEP	  25
+ #define HUB_DEBOUNCE_STABLE	 100
+ 
++#ifdef CONFIG_PDJ
++/**
++ * MTPサポートデバイスどうか
++ *
++ * @param    udev    device情報
++ * @param    desc    interface discriptor情報
++ *
++ * @retval   1       サポートしている
++ * @retval   0       サポートしていない
++ */
++static inline int is_mtp_supported( struct usb_device *udev, struct usb_interface_descriptor *desc )
++{
++	int ret=0;
++	char *interfaceName = NULL;
++
++	/*****************************************************************
++	 * 下記2点の条件を満たした場合MTPをサポートしていると判断する
++	 * (AndroidのCompatibility Definitionドキュメントを参照)
++	 * 
++	 * 1. Device Descriptorのクラス定義 = USB_CLASS_PER_INTERFACE(0)
++	 * 2. Interface Descriptorの名前がMTP
++	 * 
++	 *****************************************************************/
++	// Device Classチェック
++	if ( udev->descriptor.bDeviceClass != USB_CLASS_PER_INTERFACE ){
++		return 0;
++	}
++
++	// Interface Descriptor名チェック
++	interfaceName = usb_cache_string( udev, desc->iInterface );
++	if ( interfaceName != NULL ){
++		if ( strlen(interfaceName) >= 3 ){
++			if ( memcmp( interfaceName, "MTP", sizeof(char)*3 ) == 0 ){
++				ret = 0;
++			}
++		}
++		kfree(interfaceName);		// kmalloc()されているので要free
++	}
++
++	return ret;
++}
++
++static inline int device_in_white_list_pdj(struct usb_device *udev)
++{
++	int i, j;
++	int num_configs;
++	struct usb_host_config *c;
++	struct usb_interface_descriptor *desc;
++
++	c = udev->config;
++	num_configs = udev->descriptor.bNumConfigurations;
++	for (i = 0; i < num_configs; (i++, c++)) {
++		for (j = 0; j < c->desc.bNumInterfaces; j++) {
++			desc = &c->intf_cache[j]->altsetting->desc;
++
++			if ( !desc ){
++				continue;
++			}
++
++			if ( desc->bInterfaceClass == USB_CLASS_HUB
++			||	 desc->bInterfaceClass == USB_CLASS_MASS_STORAGE ) {
++				return 1;
++			}
++
++			if ( desc->bInterfaceClass    == USB_CLASS_AUDIO
++			&&   desc->bInterfaceSubClass == 0x03
++			&& ( ( udev->descriptor.idVendor == 0x08e4 ) || ( udev->descriptor.idVendor == 0x2b73 ) ) ) {
++				return 1;
++			}
++
++			if ( is_mtp_supported(udev, desc) ){
++				return 0;
++			}
++
++			/************************************************************************************
++			 * 旧MTPサポート判定処理
++			 *
++			 * Microsoft Descriptorを取得してMTP対応しているか判断している
++			 * Android 8.0から、このDescriptorを所持しない機種が出てきたので、
++			 * is_mtp_supported()で判定することにした
++			 *
++			 * 旧Android機種でデグレが発生しないように、念のため処理は残しておく
++			 *
++			 ************************************************************************************/
++			if ( desc->bInterfaceClass == USB_CLASS_VENDOR_SPEC && desc->bInterfaceSubClass == USB_SUBCLASS_VENDOR_SPEC ) {
++				static const unsigned char SignatureID[8] = { 0x4D, 0x00, 0x53, 0x00, 0x46, 0x00, 0x54, 0x00 };
++				static const unsigned char CompatibleID[8] = { 0x4D, 0x54, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00 };
++				static unsigned char tmp[256];
++				int result;
++
++				// Microsoft OS Descriptor取り出し
++				// 
++				// -------+--------+---------------------------
++				// offset | length | value 
++				// -------+--------+---------------------------
++				// 0      | 1      | ディスクリプタ長(=0x12)
++				// 1      | 1      | ディスクリプタ種別(=0x03)
++				// 2      | 14     | シグニチャ(="MSFT100")
++				// 16     | 1      | Vender Code
++				// 17     | 1      | pad field
++				// -------+--------+---------------------------
++				result = usb_get_descriptor(udev, USB_DT_STRING, 0xEE, tmp, 18);
++				if (result == 18){
++
++					if(memcmp(&tmp[2], SignatureID, 8) == 0) {
++						unsigned char venderCode = tmp[16];
++
++						// Microsoft OS Feature Descriptor取り出し
++						// 
++						// header
++						// -------+--------+---------------------------
++						// offset | length | value 
++						// -------+--------+---------------------------
++						// 0      | 4      | ディスクリプタ長
++						// 4      | 2      | Version
++						// 6      | 2      | index(=0x04)
++						// 8      | 1      | 
++						// 9      | 7      | Reserved
++						// -------+--------+---------------------------
++						// 
++						// extended
++						// -------+--------+---------------------------
++						// offset | length | value 
++						// -------+--------+---------------------------
++						// 0      | 1      | Interface番号(=0)
++						// 1      | 1      | Interface数
++						// 2      | 8      | Compatible ID (= "MTP")
++						// 10     | 8      | Sub Compatible ID
++						// 18     | 6      | Reserved
++						// -------+--------+---------------------------
++
++						// 総サイズ把握のためヘッダのみ取得
++						result = usb_control_msg(udev, usb_rcvctrlpipe(udev, 0),
++												 venderCode,				// request:GET_MS_DESCRIPTOR (=VenderCode)
++												 0xC0,						// requestType
++												 0x0000,					// value
++												 0x0004,					// index:要求OS feature descriptor種別:Extended Compat ID
++												 tmp,
++												 16,						// length:ヘッダ部のみ取り出し
++												 USB_CTRL_GET_TIMEOUT);
++						
++						if (result == 16) {
++							int len = (tmp[3] << 24) | (tmp[2] << 16) | (tmp[1] << 8) | tmp[0];
++							if (len < sizeof(tmp)) {
++
++								// 拡張部を含めて再取得
++								result = usb_control_msg(udev, usb_rcvctrlpipe(udev, 0),
++														 venderCode,				// request:GET_MS_DESCRIPTOR (=VenderCode)
++														 0xC0,						// requestType
++														 0x0000,					// value
++														 0x0004,					// index:要求OS feature descriptor種別:Extended Compat ID
++														 tmp,
++														 len,						// length:
++														 USB_CTRL_GET_TIMEOUT);
++
++								if (result == len) {
++									tmp[0x1A] = 0;
++									if(memcmp(&tmp[18], CompatibleID, 8) == 0) {
++										return 0;
++									}
++								}
++								// AQUOS PHONE(SH-07D)接続対応処理
++								else {
++									result = usb_control_msg(udev, usb_rcvctrlpipe(udev, 0),
++												0x08, 0xC0,
++												0x0000, 0x0004, tmp, len,
++												USB_CTRL_GET_TIMEOUT);
++									if (result == len) {
++										tmp[0x1A] = 0;
++										if(memcmp(&tmp[18], CompatibleID, 8) == 0) {
++											return 0;
++										}
++									}
++								}
++							}
++						}
++					}
++				}
++			}
++
++			if ( desc->bInterfaceClass    == USB_CLASS_HID
++			&&   desc->bInterfaceSubClass == 0x00
++			&&   desc->bInterfaceProtocol == 0x00
++			&&   udev->descriptor.idVendor == 0x05ac ){
++				return 0;
++			}
++		}
++	}
++
++	return 0;
++}
++#endif
++
+ static void hub_release(struct kref *kref);
+ static int usb_reset_and_verify_device(struct usb_device *udev);
+ 
+@@ -1413,6 +1606,12 @@ static int hub_configure(struct usb_hub
+ 		goto fail;
+ 	}
+ 
++#ifdef CONFIG_PDJ
++	if (hdev->speed == USB_SPEED_SUPER) {
++		hub->descriptor->bNbrPorts = 0;
++	}
++#endif
++
+ 	maxchild = hub->descriptor->bNbrPorts;
+ 	dev_info(hub_dev, "%d port%s detected\n", maxchild,
+ 			(maxchild == 1) ? "" : "s");
+@@ -1788,6 +1987,10 @@ static int hub_probe(struct usb_interfac
+ 	}
+ 
+ 	if (hdev->level == MAX_TOPO_LEVEL) {
++#ifdef CONFIG_PDJ
++		char *huberr_ev[] = {"HUBERR=1", NULL};
++		kobject_uevent_env(&hdev->dev.kobj, KOBJ_CHANGE, huberr_ev);
++#endif
+ 		dev_err(&intf->dev,
+ 			"Unsupported bus topology: hub nested too deep\n");
+ 		return -E2BIG;
+@@ -2484,6 +2687,14 @@ int usb_new_device(struct usb_device *ud
+ 	udev->dev.devt = MKDEV(USB_DEVICE_MAJOR,
+ 			(((udev->bus->busnum-1) * 128) + (udev->devnum-1)));
+ 
++#ifdef CONFIG_PDJ
++	if (!device_in_white_list_pdj(udev)) {
++		// UNSUPPORTEDイベント通知
++		char *unsupported_ev[] = {"UNSUPPORTED=1", NULL};
++		kobject_uevent_env(&udev->dev.kobj, KOBJ_CHANGE, unsupported_ev);	// 
++	}
++#endif
++
+ 	/* Tell the world! */
+ 	announce_device(udev);
+ 
+@@ -4499,6 +4710,12 @@ hub_port_init(struct usb_hub *hub, struc
+ 				 */
+ 				if (r == 0  || (r == -ETIMEDOUT && retries == 0))
+ 					break;
++#ifdef CONFIG_PDJ
++				if (retries) {
++					char *no_response_ev[] = {"NORESPONSE=1", NULL};
++					kobject_uevent_env(&udev->dev.kobj, KOBJ_CHANGE, no_response_ev);
++				}
++#endif
+ 			}
+ 			udev->descriptor.bMaxPacketSize0 =
+ 					buf->bMaxPacketSize0;
+@@ -4566,9 +4783,22 @@ hub_port_init(struct usb_hub *hub, struc
+ 		retval = usb_get_device_descriptor(udev, 8);
+ 		if (retval < 8) {
+ 			if (retval != -ENODEV)
++#ifdef CONFIG_PDJ
++			{
++				if (udev->speed >= USB_SPEED_SUPER)
++				{
++					char *no_response_ev[] = {"NORESPONSE=1", NULL};
++					kobject_uevent_env(&udev->dev.kobj, KOBJ_CHANGE, no_response_ev);
++				}
+ 				dev_err(&udev->dev,
+ 					"device descriptor read/8, error %d\n",
+ 					retval);
++			}
++#else
++				dev_err(&udev->dev,
++					"device descriptor read/8, error %d\n",
++					retval);
++#endif
+ 			if (retval >= 0)
+ 				retval = -EMSGSIZE;
+ 		} else {
+@@ -4618,13 +4848,36 @@ hub_port_init(struct usb_hub *hub, struc
+ 	retval = usb_get_device_descriptor(udev, USB_DT_DEVICE_SIZE);
+ 	if (retval < (signed)sizeof(udev->descriptor)) {
+ 		if (retval != -ENODEV)
++#ifdef CONFIG_PDJ
++		{
++			if (udev->speed >= USB_SPEED_SUPER)
++			{
++				char *no_response_ev[] = {"NORESPONSE=1", NULL};
++				kobject_uevent_env(&udev->dev.kobj, KOBJ_CHANGE, no_response_ev);
++			}
+ 			dev_err(&udev->dev, "device descriptor read/all, error %d\n",
+ 					retval);
++		}
++#else
++			dev_err(&udev->dev, "device descriptor read/all, error %d\n",
++					retval);
++#endif
+ 		if (retval >= 0)
+ 			retval = -ENOMSG;
+ 		goto fail;
+ 	}
+ 
++#ifdef CONFIG_PDJ
++	if ((udev->descriptor.idVendor == 0x1a0a) && (udev->descriptor.idProduct == 0x0201))
++	{
++		// UNSUPPORTEDイベント通知
++		char *unsupported_ev[] = {"UNSUPPORTED=1", NULL};
++		kobject_uevent_env(&udev->dev.kobj, KOBJ_CHANGE, unsupported_ev);
++		retval = -EPROTONOSUPPORT;
++		goto fail;
++	}
++#endif
++
+ 	usb_detect_quirks(udev);
+ 
+ 	if (udev->wusb == 0 && le16_to_cpu(udev->descriptor.bcdUSB) >= 0x0201) {
+@@ -4781,6 +5034,12 @@ static void hub_port_connect(struct usb_
+ 
+ 		if (portstatus & USB_PORT_STAT_ENABLE)
+ 			goto done;
++#ifdef CONFIG_PDJ
++		{
++			char *disconnect_ev[] = {"DISCONNECT=1", NULL};
++			kobject_uevent_env(&hdev->dev.kobj, KOBJ_CHANGE, disconnect_ev);
++		}
++#endif
+ 		return;
+ 	}
+ 	if (hub_is_superspeed(hub->hdev))
+@@ -4828,6 +5087,13 @@ static void hub_port_connect(struct usb_
+ 		if (udev->quirks & USB_QUIRK_DELAY_INIT)
+ 			msleep(1000);
+ 
++#ifdef CONFIG_PDJ
++		if ((i == 0) && (udev->descriptor.bDeviceClass != USB_CLASS_HUB)) {	/* at first time */
++			char *connect_ev[] = {"CONNECT=1", NULL};
++			kobject_uevent_env(&udev->dev.kobj, KOBJ_CHANGE, connect_ev);
++		}
++#endif
++
+ 		/* consecutive bus-powered hubs aren't reliable; they can
+ 		 * violate the voltage drop budget.  if the new child has
+ 		 * a "powered" LED, users should notice we didn't enable it
+@@ -4925,8 +5191,16 @@ loop:
+ 			!hcd->driver->port_handed_over ||
+ 			!(hcd->driver->port_handed_over)(hcd, port1)) {
+ 		if (status != -ENOTCONN && status != -ENODEV)
++#ifdef CONFIG_PDJ
++		{
++			char *disconnect_ev[] = {"DISCONNECT=1", NULL};
++			kobject_uevent_env(&hdev->dev.kobj, KOBJ_CHANGE, disconnect_ev);
++			dev_err(&port_dev->dev, "unable to enumerate USB device\n");
++		}
++#else
+ 			dev_err(&port_dev->dev,
+ 					"unable to enumerate USB device\n");
++#endif
+ 	}
+ 
+ done:
+@@ -5038,7 +5312,6 @@ static void port_event(struct usb_hub *h
+ 
+ 	if (portchange & USB_PORT_STAT_C_OVERCURRENT) {
+ 		u16 status = 0, unused;
+-
+ 		dev_dbg(&port_dev->dev, "over-current change\n");
+ 		usb_clear_port_feature(hdev, port1,
+ 				USB_PORT_FEAT_C_OVER_CURRENT);

@@ -1,0 +1,45 @@
+--- a/include/configs/rcar-gen3-common.h	2018-09-13 17:01:21.565064000 +0900
++++ b/include/configs/rcar-gen3-common.h	2019-04-05 14:35:39.411905273 +0900
+@@ -31,6 +31,12 @@
+ #define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_EXT4
+ #define CONFIG_CMD_EXT4_WRITE
++#define CONFIG_CMD_GPT
++#define CONFIG_CMD_FS_UUID
++
++#define CONFIG_PARTITION_UUIDS
++#define CONFIG_EFI_PARTITION
++#define CONFIG_RANDOM_UUID
+ 
+ #define CONFIG_SYS_THUMB_BUILD
+ #define CONFIG_SYS_GENERIC_BOARD
+@@ -54,7 +60,7 @@
+ #define CONFIG_OF_LIBFDT
+ 
+ #define CONFIG_BAUDRATE		115200
+-#define CONFIG_BOOTDELAY	3
++#define CONFIG_BOOTDELAY	0
+ 
+ #define CONFIG_VERSION_VARIABLE
+ #undef	CONFIG_SHOW_BOOT_PROGRESS
+@@ -81,7 +87,7 @@
+ 
+ /* MEMORY */
+ #define CONFIG_SYS_TEXT_BASE		0x50000000
+-#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_TEXT_BASE + 0x7fff0)
++#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_TEXT_BASE + 0xdfff0)
+ 
+ 
+ #define DRAM_RSV_SIZE			0x08000000
+@@ -100,9 +106,9 @@
+ #elif defined(CONFIG_R8A77960)
+ #define CONFIG_NR_DRAM_BANKS		2
+ #define PHYS_SDRAM_1			(0x40000000 + DRAM_RSV_SIZE)	/* legacy */
+-#define PHYS_SDRAM_1_SIZE		((unsigned long)(0x80000000 - DRAM_RSV_SIZE))
++#define PHYS_SDRAM_1_SIZE		((unsigned long)(0x40000000 - DRAM_RSV_SIZE))
+ #define PHYS_SDRAM_2			0x0600000000		/* ext */
+-#define PHYS_SDRAM_2_SIZE		((unsigned long)0x80000000)
++#define PHYS_SDRAM_2_SIZE		((unsigned long)0x40000000)
+ #define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM_1
+ #define CONFIG_SYS_SDRAM_SIZE		PHYS_SDRAM_1_SIZE
+ #elif defined(CONFIG_R8A77965)

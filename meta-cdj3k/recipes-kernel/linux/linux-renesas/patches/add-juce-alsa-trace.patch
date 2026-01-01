@@ -1,0 +1,97 @@
+--- a/sound/core/pcm_native.c	2019-11-01 11:33:58.371889000 +0900
++++ b/sound/core/pcm_native.c	2019-11-11 15:18:42.787546448 +0900
+@@ -36,6 +36,12 @@
+ #include <sound/minors.h>
+ #include <linux/uio.h>
+ 
++#ifdef CONFIG_OBSERVE_JUCE_ALSA
++static unsigned long long alsa_ns = 0;
++static unsigned int backup_playback_poll_mask = 0;
++static const int alsa_cpu = 1;
++#endif
++
+ /*
+  *  Compatibility
+  */
+@@ -3187,6 +3193,21 @@ static unsigned int snd_pcm_playback_pol
+ 		break;
+ 	}
+ 	snd_pcm_stream_unlock_irq(substream);
++
++#if CONFIG_OBSERVE_JUCE_ALSA
++	if (raw_smp_processor_id() == alsa_cpu) {
++		if (mask != 0 && mask == backup_playback_poll_mask) {
++			unsigned long long time_ns = sched_clock();
++			trace_printk("!!!!!!! snd over delta=%lld\n", time_ns - alsa_ns);
++			printk("!!!!!!! snd over delta=%lld\n", time_ns - alsa_ns);
++			tracing_off();
++		}
++		alsa_ns = sched_clock();
++
++		backup_playback_poll_mask = mask;
++	}
++#endif
++
+ 	return mask;
+ }
+ 
+--- a/mm/memory.c	2019-11-18 20:46:48.079535000 +0900
++++ b/mm/memory.c	2019-11-19 13:50:23.683676000 +0900
+@@ -79,6 +79,10 @@
+ #warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_cpupid.
+ #endif
+ 
++#ifdef CONFIG_PDJ
++static const int alsa_cpu = 1;
++#endif
++
+ #ifndef CONFIG_NEED_MULTIPLE_NODES
+ /* use the per-pgdat data instead for discontigmem - mbligh */
+ unsigned long max_mapnr;
+@@ -2744,6 +2748,11 @@ static int do_anonymous_page(struct faul
+ 	struct page *page;
+ 	pte_t entry;
+ 
++#ifdef CONFIG_PDJ
++	if (raw_smp_processor_id() == alsa_cpu)
++		trace_printk("\n");
++#endif
++
+ 	/* File mapping without ->vm_ops ? */
+ 	if (vma->vm_flags & VM_SHARED)
+ 		return VM_FAULT_SIGBUS;
+@@ -3318,6 +3327,10 @@ static int do_fault(struct fault_env *fe
+ {
+ 	struct vm_area_struct *vma = fe->vma;
+ 	pgoff_t pgoff = linear_page_index(vma, fe->address);
++#ifdef CONFIG_PDJ
++	if (raw_smp_processor_id() == alsa_cpu)
++		trace_printk("\n");
++#endif
+ 
+ 	/* The VMA was not fully populated on mmap() or missing VM_DONTEXPAND */
+ 	if (!vma->vm_ops->fault)
+@@ -3355,6 +3368,11 @@ static int do_numa_page(struct fault_env
+ 	bool was_writable = pte_write(pte);
+ 	int flags = 0;
+ 
++#ifdef CONFIG_PDJ
++	if (raw_smp_processor_id() == alsa_cpu)
++		trace_printk("\n");
++#endif
++
+ 	/*
+ 	* The "pte" at this point cannot be used safely without
+ 	* validation through pte_unmap_same(). It's of NUMA type but
+@@ -3482,7 +3500,10 @@ static inline bool vma_is_accessible(str
+ static int handle_pte_fault(struct fault_env *fe)
+ {
+ 	pte_t entry;
+-
++#ifdef CONFIG_PDJ
++	if (raw_smp_processor_id() == alsa_cpu)
++		trace_printk("\n");
++#endif
+ 	if (unlikely(pmd_none(*fe->pmd))) {
+ 		/*
+ 		 * Leave __pte_alloc() until later: because vm_ops->fault may

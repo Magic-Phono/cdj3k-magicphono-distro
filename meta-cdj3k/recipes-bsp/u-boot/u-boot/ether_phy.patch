@@ -1,0 +1,105 @@
+--- a/drivers/net/ravb.c	2018-03-26 11:24:12.059667000 +0900
++++ b/drivers/net/ravb.c	2018-04-09 09:58:53.030523138 +0900
+@@ -438,7 +438,7 @@ static int ravb_dmac_init(struct ravb_de
+ 
+ 	if (CONFIG_RAVB_PHY_MODE == PHY_INTERFACE_MODE_RGMII_ID) {
+ 		/* delay CLK: 2ns */
+-		ravb_write(eth, 0x1ul << 14, APSR);
++		ravb_write(eth, 0x3ul << 13, APSR);
+ 	}
+ 
+ 	return ret;
+@@ -488,8 +488,6 @@ static int ravb_config(struct ravb_dev *
+ 		ravb_write(eth, ECMR_CHG_DM | ECMR_RE | ECMR_TE, ECMR);
+ 	}
+ 
+-	phy->drv->writeext(phy, -1, 0x02, 0x08, (0x0f<<5) | 0x19);
+-
+ err_phy_cfg:
+ 	return ret;
+ }
+@@ -588,7 +586,7 @@ int ravb_initialize(bd_t *bd)
+ 	eth_register(dev);
+ 
+ 	bb_miiphy_buses[dev->index].priv = eth;
+-	miiphy_register(dev->name, bb_miiphy_read, bb_miiphy_write);
++	miiphy_register(dev->name, rtk_miiphy_read, rtk_miiphy_write);
+ 
+ 	return ret;
+
+ 
+--- a/include/miiphy.h	2018-03-26 11:24:12.171667000 +0900
++++ b/include/miiphy.h	2018-04-04 17:09:49.832143919 +0900
+@@ -88,6 +88,10 @@ int bb_miiphy_read(const char *devname,
+ 		    unsigned char reg, unsigned short *value);
+ int bb_miiphy_write(const char *devname, unsigned char addr,
+ 		     unsigned char reg, unsigned short value);
++int rtk_miiphy_read(const char *devname, unsigned char addr,
++		    unsigned char reg, unsigned short *value);
++int rtk_miiphy_write(const char *devname, unsigned char addr,
++		     unsigned char reg, unsigned short value);
+ #endif
+ 
+ /* phy seed setup */
+
+--- a/drivers/net/phy/miiphybb.c	2018-03-26 11:24:12.059667000 +0900
++++ b/drivers/net/phy/miiphybb.c	2018-04-04 19:21:08.683978635 +0900
+@@ -17,6 +17,8 @@
+ #include <ioports.h>
+ #include <ppc_asm.tmpl>
+ #include <miiphy.h>
++#include <rtk_types.h>
++#include <port.h>
+ 
+ #define BB_MII_RELOCATE(v,off) (v += (v?off:0))
+ 
+@@ -362,3 +364,49 @@ int bb_miiphy_write (const char *devname
+ 
+ 	return 0;
+ }
++
++/*****************************************************************************
++ *
++ * Read a MII PHY register.
++ *
++ * Returns:
++ *   0 on success
++ */
++int rtk_miiphy_read(const char *devname, unsigned char addr,
++		   unsigned char reg, unsigned short *value)
++{
++	struct bb_miiphy_bus *bus;
++
++	bus = bb_miiphy_getbus(devname);
++	if (bus == NULL) {
++		return -1;
++	}
++
++	if (value == NULL) {
++		puts("NULL value pointer\n");
++		return -1;
++	}
++
++	return((int)rtk_port_phyReg_get((rtk_port_t)UTP_PORT0, (rtk_port_phy_reg_t)reg, (rtk_port_phy_data_t*)value));
++}
++
++/*****************************************************************************
++ *
++ * Write a MII PHY register.
++ *
++ * Returns:
++ *   0 on success
++ */
++int rtk_miiphy_write (const char *devname, unsigned char addr,
++		     unsigned char reg, unsigned short value)
++{
++	struct bb_miiphy_bus *bus;
++
++	bus = bb_miiphy_getbus(devname);
++	if (bus == NULL) {
++		/* Bus not found! */
++		return -1;
++	}
++
++	return((int)rtk_port_phyReg_set((rtk_port_t)UTP_PORT0, (rtk_port_phy_reg_t)reg, (rtk_port_phy_data_t)value));
++}

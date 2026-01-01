@@ -1,0 +1,30 @@
+--- a/kernel/printk/printk.c	2019-07-05 14:52:05.379509000 +0900
++++ b/kernel/printk/printk.c	2019-07-05 16:33:20.711440430 +0900
+@@ -2249,6 +2249,7 @@ int is_console_locked(void)
+ 	return console_locked;
+ }
+ 
++#ifndef CONFIG_PDJ
+ /*
+  * Check if we have any console that is capable of printing while cpu is
+  * booting or shutting down. Requires console_sem.
+@@ -2264,6 +2265,7 @@ static int have_callable_console(void)
+ 
+ 	return 0;
+ }
++#endif
+ 
+ /*
+  * Can we actually use the console at this time on this cpu?
+@@ -2274,7 +2276,11 @@ static int have_callable_console(void)
+  */
+ static inline int can_use_console(void)
+ {
++#ifdef CONFIG_PDJ
++	return 0;
++#else
+ 	return cpu_online(raw_smp_processor_id()) || have_callable_console();
++#endif
+ }
+ 
+ static void console_cont_flush(char *text, size_t size)

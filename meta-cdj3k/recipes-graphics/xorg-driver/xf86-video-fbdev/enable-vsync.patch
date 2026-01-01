@@ -1,0 +1,56 @@
+--- a/src/Makefile.am	2013-08-16 18:25:48.000000000 +0900
++++ b/src/Makefile.am	2020-06-02 19:45:52.000000000 +0900
+@@ -30,4 +30,5 @@ fbdev_drv_ladir = @moduledir@/drivers
+ 
+ fbdev_drv_la_SOURCES = \
+          compat-api.h \
+-         fbdev.c
++         fbdev.c \
++         flip_control.c
+
+--- a/src/fbdev.c	2013-09-24 03:00:47.000000000 +0900
++++ b/src/fbdev.c	2020-06-03 14:41:37.000000000 +0900
+@@ -38,6 +38,8 @@
+ #include <pciaccess.h>
+ #endif
+ 
++#include "flip_control.h"
++
+ static Bool debug = 0;
+ 
+ #define TRACE_ENTER(str) \
+@@ -602,6 +604,14 @@ FBDevPreInit(ScrnInfoPtr pScrn, int flag
+ 		}
+ 	}
+ 
++	if (!StartFlipMode(pScrn->virtualX, pScrn->virtualY, default_depth, fbbpp)) {
++		xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "StartFlipMode() error !!\n");
++		FBDevFreeRec(pScrn);
++		return FALSE;
++	}
++	
++	atexit(StopFlipMode);
++
+ 	TRACE_EXIT("PreInit");
+ 	return TRUE;
+ }
+@@ -624,9 +634,10 @@ FBDevCreateScreenResources(ScreenPtr pSc
+ 
+     pPixmap = pScreen->GetScreenPixmap(pScreen);
+ 
+-    if (!shadowAdd(pScreen, pPixmap, fPtr->rotate ?
+-		   shadowUpdateRotatePackedWeak() : shadowUpdatePackedWeak(),
+-		   FBDevWindowLinear, fPtr->rotate, NULL)) {
++    if (!shadowAdd(pScreen, pPixmap,
++           fPtr->rotate ? shadowUpdateRotatePackedWeak() : (fPtr->shadowFB ? FlippedShadowUpdatePacked : shadowUpdatePackedWeak()),
++           fPtr->rotate ? FBDevWindowLinear              : (fPtr->shadowFB ? FlippedWindowLinear : FBDevWindowLinear),
++           fPtr->rotate, NULL)) {
+ 	return FALSE;
+     }
+ 
+@@ -1160,3 +1171,5 @@ FBDevDriverFunc(ScrnInfoPtr pScrn, xorgD
+ 	    return FALSE;
+     }
+ }
++
++

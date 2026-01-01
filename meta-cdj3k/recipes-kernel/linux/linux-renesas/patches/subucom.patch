@@ -1,0 +1,7 @@
+--- a/drivers/spi/Makefile	2018-11-21 14:37:50.286081000 +0900
++++ b/drivers/spi/Makefile	2018-11-21 16:49:20.000000000 +0900
+@@ -102,3 +102,4 @@ obj-$(CONFIG_SPI_XILINX)		+= spi-xilinx.
+ obj-$(CONFIG_SPI_XLP)			+= spi-xlp.o
+ obj-$(CONFIG_SPI_XTENSA_XTFPGA)		+= spi-xtensa-xtfpga.o
+ obj-$(CONFIG_SPI_ZYNQMP_GQSPI)		+= spi-zynqmp-gqspi.o
++obj-$(CONFIG_PDJ)			+= subucom_spi.o

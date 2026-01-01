@@ -1,0 +1,215 @@
+--- a/drivers/usb/gadget/configfs.c	2018-11-27 18:10:37.915356000 +0900
++++ b/drivers/usb/gadget/configfs.c	2018-11-27 18:54:29.467330000 +0900
+@@ -660,7 +660,7 @@ static struct config_group *config_desc_
+ 	}
+ 	cfg->c.bConfigurationValue = num;
+ 	cfg->c.MaxPower = CONFIG_USB_GADGET_VBUS_DRAW;
+-	cfg->c.bmAttributes = USB_CONFIG_ATT_ONE;
++	cfg->c.bmAttributes = USB_CONFIG_ATT_ONE | USB_CONFIG_ATT_SELFPOWER;
+ 	INIT_LIST_HEAD(&cfg->string_list);
+ 	INIT_LIST_HEAD(&cfg->func_list);
+ 
+--- a/drivers/usb/renesas_usbhs/mod_gadget.c	2019-03-20 18:00:11.000000000 +0900
++++ b/drivers/usb/renesas_usbhs/mod_gadget.c	2019-05-30 17:07:48.460818866 +0900
+@@ -1,18 +1,9 @@
++// SPDX-License-Identifier: GPL-1.0+
+ /*
+  * Renesas USB driver
+  *
+  * Copyright (C) 2011 Renesas Solutions Corp.
+  * Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+- *
+  */
+ #include <linux/delay.h>
+ #include <linux/dma-mapping.h>
+@@ -764,7 +755,7 @@ static int usbhsg_ep_set_wedge(struct us
+ 	return __usbhsg_ep_set_halt_wedge(ep, 1, 1);
+ }
+ 
+-static struct usb_ep_ops usbhsg_ep_ops = {
++static const struct usb_ep_ops usbhsg_ep_ops = {
+ 	.enable		= usbhsg_ep_enable,
+ 	.disable	= usbhsg_ep_disable,
+ 
+@@ -856,6 +847,13 @@ static int usbhsg_try_start(struct usbhs
+ 	mod->irq_ctrl_stage	= usbhsg_irq_ctrl_stage;
+ 	usbhs_irq_callback_update(priv, mod);
+ 
++#ifdef CONFIG_PDJ
++	{
++		char *host_connect_ev[] = {"HOSTCONNECT=1", NULL};
++		kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, host_connect_ev);
++	}
++#endif
++
+ 	return 0;
+ }
+ 
+@@ -904,6 +902,13 @@ static int usbhsg_try_stop(struct usbhs_
+ 
+ 	dev_dbg(dev, "stop gadget\n");
+ 
++#ifdef CONFIG_PDJ
++	{
++		char *host_disconnect_ev[] = {"HOSTDISCONNECT=1", NULL};
++		kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, host_disconnect_ev);
++	}
++#endif
++
+ 	return 0;
+ }
+ 
+--- a/drivers/usb/renesas_usbhs/fifo.c	2019-06-04 10:35:39.000000000 +0900
++++ b/drivers/usb/renesas_usbhs/fifo.c	2019-12-18 16:45:07.361344189 +0900
+@@ -268,15 +268,9 @@ static void usbhsf_send_terminator(struc
+ static int usbhsf_fifo_barrier(struct usbhs_priv *priv,
+ 			       struct usbhs_fifo *fifo)
+ {
+-	int timeout = 1024;
+-
+-	do {
+-		/* The FIFO port is accessible */
+-		if (usbhs_read(priv, fifo->ctr) & FRDY)
+-			return 0;
+-
+-		udelay(10);
+-	} while (timeout--);
++	/* The FIFO port is accessible */
++	if (usbhs_read(priv, fifo->ctr) & FRDY)
++		return 0;
+ 
+ 	return -EBUSY;
+ }
+@@ -285,11 +279,26 @@ static void usbhsf_fifo_clear(struct usb
+ 			      struct usbhs_fifo *fifo)
+ {
+ 	struct usbhs_priv *priv = usbhs_pipe_to_priv(pipe);
++	int ret = 0;
+ 
+-	if (!usbhs_pipe_is_dcp(pipe))
+-		usbhsf_fifo_barrier(priv, fifo);
++	if (!usbhs_pipe_is_dcp(pipe)) {
++		/*
++		 * This driver checks the pipe condition first to avoid -EBUSY
++		 * from usbhsf_fifo_barrier() if the pipe is RX direction and
++		 * empty.
++		 */
++		if (usbhs_pipe_is_dir_in(pipe))
++			ret = usbhs_pipe_is_accessible(pipe);
++		if (!ret)
++			ret = usbhsf_fifo_barrier(priv, fifo);
++	}
+ 
+-	usbhs_write(priv, fifo->ctr, BCLR);
++	/*
++	 * if non-DCP pipe, this driver should set BCLR when
++	 * usbhsf_fifo_barrier() returns 0.
++	 */
++	if (!ret)
++		usbhs_write(priv, fifo->ctr, BCLR);
+ }
+ 
+ static int usbhsf_fifo_rcv_len(struct usbhs_priv *priv,
+@@ -869,6 +878,11 @@ static int usbhsf_dma_prepare_push(struc
+ 	if (usbhs_pipe_is_busy(pipe))
+ 		return 0;
+ 
++#ifdef CONFIG_PDJ
++	if(usbhs_pipe_type_is(pipe, USB_ENDPOINT_XFER_INT))
++		goto usbhsf_pio_prepare_push;	// fallback to PIO mode for intr xfer
++#endif
++
+ 	/* use PIO if packet is less than pio_dma_border or pipe is DCP */
+ 	if ((len < usbhs_get_dparam(priv, pio_dma_border)) ||
+ 	    usbhs_pipe_type_is(pipe, USB_ENDPOINT_XFER_ISOC))
+@@ -974,6 +988,11 @@ static int usbhsf_dma_prepare_pop_with_u
+ 	if (usbhs_pipe_is_busy(pipe))
+ 		return 0;
+ 
++#ifdef CONFIG_PDJ
++	if(usbhs_pipe_type_is(pipe, USB_ENDPOINT_XFER_INT))
++		goto usbhsf_pio_prepare_pop;	// fallback to PIO for intr xfer
++#endif
++
+ 	/* use PIO if packet is less than pio_dma_border or pipe is DCP */
+ 	if ((pkt->length < usbhs_get_dparam(priv, pio_dma_border)) ||
+ 	    usbhs_pipe_type_is(pipe, USB_ENDPOINT_XFER_ISOC))
+@@ -986,6 +1005,10 @@ static int usbhsf_dma_prepare_pop_with_u
+ 	if ((uintptr_t)pkt->buf & (USBHS_USB_DMAC_XFER_SIZE - 1))
+ 		goto usbhsf_pio_prepare_pop;
+ 
++	/* return at this time if the pipe is running */
++	if (usbhs_pipe_is_running(pipe))
++		return 0;
++
+ 	usbhs_pipe_config_change_bfre(pipe, 1);
+ 
+ 	ret = usbhsf_fifo_select(pipe, fifo, 0);
+@@ -1176,6 +1199,7 @@ static int usbhsf_dma_pop_done_with_usb_
+ 	usbhsf_fifo_clear(pipe, fifo);
+ 	pkt->actual = usbhs_dma_calc_received_size(pkt, chan, rcv_len);
+ 
++	usbhs_pipe_running(pipe, 0);
+ 	usbhsf_dma_stop(pipe, fifo);
+ 	usbhsf_dma_unmap(pkt);
+ 	usbhsf_fifo_unselect(pipe, pipe->fifo);
+
+--- a/drivers/usb/renesas_usbhs/pipe.c	2019-12-18 14:54:46.992426000 +0900
++++ b/drivers/usb/renesas_usbhs/pipe.c	2019-12-18 16:48:37.344540084 +0900
+@@ -261,7 +261,22 @@ static int usbhsp_pipe_barrier(struct us
+ 	 *  - "Pipe Control"
+ 	 *   - "Pipe Control Registers Switching Procedure"
+ 	 */
++#ifdef CONFIG_PDJ
++	for (;;) {
++		u16 cfifosel;
++
++		usbhs_write(priv, CFIFOSEL, 0);
++
++		/* Confirming write result is required.
++		 * See also: field descriptions for ISEL and CURPIPE of the CFIFOSEL
++		 * register, written in 74.2.7 (pp 74-19.) */
++		cfifosel = usbhs_read(priv, CFIFOSEL);
++		if(cfifosel == 0)
++			break;		// confirmed
++	}
++#else
+ 	usbhs_write(priv, CFIFOSEL, 0);
++#endif
+ 	usbhs_pipe_disable(pipe);
+ 
+ 	do {
+
+--- a/drivers/usb/gadget/udc/core.c	2018-11-27 18:10:37.000000000 +0900
++++ b/drivers/usb/gadget/udc/core.c	2019-12-23 14:46:57.913389755 +0900
+@@ -259,7 +259,12 @@ int usb_ep_queue(struct usb_ep *ep,
+ {
+ 	int ret = 0;
+ 
++#ifdef CONFIG_PDJ
++	if (!ep->enabled && ep->address) {
++		printk("INFO : Maybe the usb peripheral is disconnected.\n");
++#else
+ 	if (WARN_ON_ONCE(!ep->enabled && ep->address)) {
++#endif
+ 		ret = -ESHUTDOWN;
+ 		goto out;
+ 	}
+@@ -944,7 +949,7 @@ int usb_gadget_ep_match_desc(struct usb_
+ 		/* Bulk endpoints handle interrupt transfers,
+ 		 * except the toggle-quirky iso-synch kind
+ 		 */
+-		if (!ep->caps.type_int && !ep->caps.type_bulk)
++		if (!ep->caps.type_int/* && !ep->caps.type_bulk*/)
+ 			return 0;
+ 		/* INT:  limit 64 bytes full speed, 1024 high/super speed */
+ 		if (!gadget_is_dualspeed(gadget) && max > 64)

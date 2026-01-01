@@ -1,0 +1,117 @@
+--- a/drivers/gpu/drm/drm_fb_helper.c	2018-11-06 16:23:04.562865000 +0900
++++ b/drivers/gpu/drm/drm_fb_helper.c	2018-11-05 15:03:29.918789000 +0900
+@@ -728,7 +728,7 @@ int drm_fb_helper_init(struct drm_device
+ 	if (!fb_helper->crtc_info)
+ 		return -ENOMEM;
+ 
+-	fb_helper->crtc_count = crtc_count;
++	fb_helper->crtc_count = 1;//crtc_count;
+ 	fb_helper->connector_info = kcalloc(dev->mode_config.num_connector, sizeof(struct drm_fb_helper_connector *), GFP_KERNEL);
+ 	if (!fb_helper->connector_info) {
+ 		kfree(fb_helper->crtc_info);
+
+--- a/drivers/gpu/drm/rcar-du/rcar_du_vgacon.c	2018-11-06 16:23:14.902865000 +0900
++++ b/drivers/gpu/drm/rcar-du/rcar_du_vgacon.c	2018-11-05 15:04:58.118789000 +0900
+@@ -23,7 +23,7 @@
+ 
+ static int rcar_du_vga_connector_get_modes(struct drm_connector *connector)
+ {
+-	return drm_add_modes_noedid(connector, 1024, 768);
++	return drm_add_modes_noedid(connector, 320,240);
+ }
+ 
+ static const struct drm_connector_helper_funcs connector_helper_funcs = {
+
+--- a/drivers/gpu/drm/drm_edid.c	2018-11-06 17:44:27.578869000 +0900
++++ b/drivers/gpu/drm/drm_edid.c	2018-11-29 10:44:28.475381650 +0900
+@@ -505,6 +505,10 @@ static const struct drm_display_mode drm
+ 	{ DRM_MODE("4096x2160", DRM_MODE_TYPE_DRIVER, 556188, 4096, 4104,
+ 		   4136, 4176, 0, 2160, 2208, 2216, 2222, 0,
+ 		   DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_NVSYNC) },
++	/* 0x59 - 320x240@60Hz */
++	{ DRM_MODE("320x240", DRM_MODE_TYPE_DRIVER, 9091, 320, 380,
++			412, 448, 0, 240, 265, 269, 283, 0,
++			DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC) },
+ };
+ 
+ /*
+@@ -4127,6 +4131,7 @@ EXPORT_SYMBOL(drm_add_edid_modes);
+ int drm_add_modes_noedid(struct drm_connector *connector,
+ 			int hdisplay, int vdisplay)
+ {
++	printk("%s called\n",__func__);
+ 	int i, count, num_modes = 0;
+ 	struct drm_display_mode *mode;
+ 	struct drm_device *dev = connector->dev;
+@@ -4146,13 +4151,18 @@ int drm_add_modes_noedid(struct drm_conn
+ 			 * the connector.
+ 			 */
+ 			if (ptr->hdisplay > hdisplay ||
+-					ptr->vdisplay > vdisplay)
++			ptr->vdisplay > vdisplay) {
++				/* printk("%s called ptr->hdisplay=%d, hdisplay=%d, ptr->vdisplay=%d, vdisplay=%d\n", __func__, ptr->hdisplay,hdisplay, ptr->vdisplay, vdisplay); */
+ 				continue;
++			}
+ 		}
+-		if (drm_mode_vrefresh(ptr) > 61)
++		if (drm_mode_vrefresh(ptr) > 72) {
++			printk("%s drm_mode_vrefresh(ptr) > 72\n", __func__);
+ 			continue;
++		}
+ 		mode = drm_mode_duplicate(dev, ptr);
+ 		if (mode) {
++			printk("%s mode\n ",__func__);
+ 			drm_mode_probed_add(connector, mode);
+ 			num_modes++;
+ 		}
+
+--- a/drivers/gpu/drm/drm_crtc.c	2019-06-12 14:11:05.215070000 +0900
++++ b/drivers/gpu/drm/drm_crtc.c	2019-07-27 18:46:44.634831868 +0900
+@@ -45,6 +45,10 @@
+ #include "drm_crtc_internal.h"
+ #include "drm_internal.h"
+ 
++#ifdef CONFIG_PDJ
++#include <linux/gpio.h>
++#endif
++
+ /*
+  * Global properties
+  */
+@@ -871,6 +875,10 @@ int drm_mode_setcrtc(struct drm_device *
+ 	set.num_connectors = crtc_req->count_connectors;
+ 	set.fb = fb;
+ 	ret = drm_mode_set_config_internal(&set);
++#ifdef CONFIG_PDJ
++	msleep(10);
++	gpio_direction_output(490, 1); /* G2M_LVDSTX_XRST */
++#endif
+ 
+ out:
+ 	if (fb)
+
+--- a/drivers/gpu/drm/rcar-du/rcar_du_drv.c	2019-07-29 19:17:13.361105000 +0900
++++ b/drivers/gpu/drm/rcar-du/rcar_du_drv.c	2019-07-31 16:13:04.750736000 +0900
+@@ -22,6 +22,10 @@
+ #include <linux/wait.h>
+ #include <linux/sys_soc.h>
+ 
++#ifdef CONFIG_PDJ
++#include <linux/gpio.h>
++#endif
++
+ #include <drm/drmP.h>
+ #include <drm/drm_atomic.h>
+ #include <drm/drm_atomic_helper.h>
+@@ -617,6 +621,11 @@ static int rcar_du_probe(struct platform
+ 
+ 	ddev->irq_enabled = 1;
+ 
++#ifdef CONFIG_PDJ
++	msleep(50);
++	gpio_direction_output(488, 1); /* BL0_FREN */
++#endif
++
+ 	/* Register the DRM device with the core and the connectors with
+ 	 * sysfs.
+ 	 */

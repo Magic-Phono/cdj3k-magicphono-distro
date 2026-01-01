@@ -1,0 +1,197 @@
+--- a/sound/soc/codecs/ak4104.c	2018-09-14 19:18:13.775529000 +0900
++++ b/sound/soc/codecs/ak4104.c	2018-12-17 14:00:09.125284000 +0900
+@@ -51,11 +51,32 @@ struct ak4104_private {
+ 	struct regulator *regulator;
+ };
+ 
++#ifdef CONFIG_PDJ
++static const struct reg_default ak4104_reg_defaults[] = {
++	{ AK4104_REG_CONTROL1,		0x8F },
++	{ AK4104_REG_RESERVED,		0x5B },
++	{ AK4104_REG_CONTROL2,		0x00 },
++	{ AK4104_REG_TX,			0x81 },
++	{ AK4104_REG_CHN_STATUS(0),	0x04 },
++	{ AK4104_REG_CHN_STATUS(1), 0x00 },
++	{ AK4104_REG_CHN_STATUS(2), 0x00 },
++	{ AK4104_REG_CHN_STATUS(3), 0x00 },
++	{ AK4104_REG_CHN_STATUS(4), 0x00 },
++	{ AK4104_REG_CHN_STATUS(5), 0x00 },
++};
++
++static const struct snd_soc_dapm_widget ak4104_dapm_widgets[] = {
++SND_SOC_DAPM_PGA("TXE", AK4104_REG_TX, 0, 0, NULL, 0),
++
++SND_SOC_DAPM_OUTPUT("TX"),
++};
++#else
+ static const struct snd_soc_dapm_widget ak4104_dapm_widgets[] = {
+ SND_SOC_DAPM_PGA("TXE", AK4104_REG_TX, AK4104_TX_TXE, 0, NULL, 0),
+ 
+ SND_SOC_DAPM_OUTPUT("TX"),
+ };
++#endif
+ 
+ static const struct snd_soc_dapm_route ak4104_dapm_routes[] = {
+ 	{ "TXE", NULL, "Playback" },
+@@ -105,6 +126,9 @@ static int ak4104_hw_params(struct snd_p
+ 	struct snd_soc_codec *codec = dai->codec;
+ 	struct ak4104_private *ak4104 = snd_soc_codec_get_drvdata(codec);
+ 	int ret, val = 0;
++#ifdef CONFIG_PDJ
++	int val2 = 0;
++#endif
+ 
+ 	/* set the IEC958 bits: consumer mode, no copyright bit */
+ 	val |= IEC958_AES0_CON_NOT_COPYRIGHT;
+@@ -112,6 +136,33 @@ static int ak4104_hw_params(struct snd_p
+ 
+ 	val = 0;
+ 
++#ifdef CONFIG_PDJ
++	switch (params_rate(params)) {
++	case 44100:
++		ret = gpio_direction_output(371, 0);
++		val |= IEC958_AES3_CON_FS_44100;
++		val2 |= IEC958_AES4_CON_ORIGFS_44100;
++		break;
++	case 48000:
++		ret = gpio_direction_output(371, 1);
++		val |= IEC958_AES3_CON_FS_48000;
++		val2 |= IEC958_AES4_CON_ORIGFS_48000;
++		break;
++	case 88200:
++		ret = gpio_direction_output(371, 0);
++		val |= IEC958_AES3_CON_FS_88200;
++		val2 |= IEC958_AES4_CON_ORIGFS_88200;
++		break;
++	case 96000:
++		ret = gpio_direction_output(371, 1);
++		val |= IEC958_AES3_CON_FS_96000;
++		val2 |= IEC958_AES4_CON_ORIGFS_96000;
++		break;
++	default:
++		dev_err(codec->dev, "unsupported sampling rate\n");
++		return -EINVAL;
++	}
++#else
+ 	switch (params_rate(params)) {
+ 	case 22050:
+ 		val |= IEC958_AES3_CON_FS_22050;
+@@ -144,11 +195,18 @@ static int ak4104_hw_params(struct snd_p
+ 		dev_err(codec->dev, "unsupported sampling rate\n");
+ 		return -EINVAL;
+ 	}
++#endif
+ 
+ 	ret = regmap_write(ak4104->regmap, AK4104_REG_CHN_STATUS(3), val);
+ 	if (ret < 0)
+ 		return ret;
+ 
++#ifdef CONFIG_PDJ
++	ret = regmap_write(ak4104->regmap, AK4104_REG_CHN_STATUS(4), val2);
++	if (ret < 0)
++		return ret;
++#endif
++
+ 	return 0;
+ }
+ 
+@@ -163,6 +221,11 @@ static struct snd_soc_dai_driver ak4104_
+ 		.stream_name = "Playback",
+ 		.channels_min = 2,
+ 		.channels_max = 2,
++#ifdef CONFIG_PDJ
++		.rates = SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
++			 SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000,
++		.formats = SNDRV_PCM_FMTBIT_S24_LE
++#else
+ 		.rates = SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_32000 |
+ 			 SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 |
+ 			 SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 |
+@@ -170,6 +233,7 @@ static struct snd_soc_dai_driver ak4104_
+ 		.formats = SNDRV_PCM_FMTBIT_S16_LE  |
+ 			   SNDRV_PCM_FMTBIT_S24_3LE |
+ 			   SNDRV_PCM_FMTBIT_S24_LE
++#endif
+ 	},
+ 	.ops = &ak4101_dai_ops,
+ };
+@@ -186,17 +250,31 @@ static int ak4104_probe(struct snd_soc_c
+ 	}
+ 
+ 	/* set power-up and non-reset bits */
++#ifdef CONFIG_PDJ
++	ret = regmap_write(ak4104->regmap, AK4104_REG_CONTROL1,
++				 0x80 | AK4104_CONTROL1_PW | AK4104_CONTROL1_RSTN);
++	if (ret < 0)
++		goto exit_disable_regulator;
++#else
+ 	ret = regmap_update_bits(ak4104->regmap, AK4104_REG_CONTROL1,
+ 				 AK4104_CONTROL1_PW | AK4104_CONTROL1_RSTN,
+ 				 AK4104_CONTROL1_PW | AK4104_CONTROL1_RSTN);
+ 	if (ret < 0)
+ 		goto exit_disable_regulator;
++#endif
+ 
+ 	/* enable transmitter */
++#ifdef CONFIG_PDJ
++	ret = regmap_write(ak4104->regmap, AK4104_REG_TX,
++				 0x80 | AK4104_TX_TXE);
++	if (ret < 0)
++		goto exit_disable_regulator;
++#else
+ 	ret = regmap_update_bits(ak4104->regmap, AK4104_REG_TX,
+ 				 AK4104_TX_TXE, AK4104_TX_TXE);
+ 	if (ret < 0)
+ 		goto exit_disable_regulator;
++#endif
+ 
+ 	return 0;
+ 
+@@ -264,6 +342,11 @@ static const struct regmap_config ak4104
+ 	.read_flag_mask = AK4104_READ,
+ 	.write_flag_mask = AK4104_WRITE,
+ 
++#ifdef CONFIG_PDJ
++	.reg_defaults = ak4104_reg_defaults,
++	.num_reg_defaults = ARRAY_SIZE(ak4104_reg_defaults),
++#endif
++
+ 	.cache_type = REGCACHE_RBTREE,
+ };
+ 
+@@ -271,11 +354,18 @@ static int ak4104_spi_probe(struct spi_d
+ {
+ 	struct device_node *np = spi->dev.of_node;
+ 	struct ak4104_private *ak4104;
++#ifndef CONFIG_PDJ
+ 	unsigned int val;
++#endif
+ 	int ret;
+ 
+ 	spi->bits_per_word = 8;
++#ifdef CONFIG_PDJ
++	spi->mode = SPI_MODE_3;
++	spi->chip_select = 2;
++#else
+ 	spi->mode = SPI_MODE_0;
++#endif
+ 	ret = spi_setup(spi);
+ 	if (ret < 0)
+ 		return ret;
+@@ -312,6 +402,7 @@ static int ak4104_spi_probe(struct spi_d
+ 		}
+ 	}
+ 
++#ifndef CONFIG_PDJ
+ 	/* read the 'reserved' register - according to the datasheet, it
+ 	 * should contain 0x5b. Not a good way to verify the presence of
+ 	 * the device, but there is no hardware ID register. */
+@@ -320,6 +411,7 @@ static int ak4104_spi_probe(struct spi_d
+ 		return ret;
+ 	if (val != AK4104_RESERVED_VAL)
+ 		return -ENODEV;
++#endif
+ 
+ 	spi_set_drvdata(spi, ak4104);
+ 
