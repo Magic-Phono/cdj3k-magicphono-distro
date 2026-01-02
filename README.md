@@ -35,7 +35,7 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 - If booting from the SD-card fails, the CDJ-3000 will boot from its internal firmware as usual.
 
 > [!WARNING]  
-> Root access via SSH is enabled by default with password `&mpcdj3k`. This will be disabled in future pre-built
+> Root access via SSH is enabled by default with no password. This will be disabled in future pre-built
 > images as MagicPhono Linux stabilizes.
 
 ## Build Requirements
@@ -82,7 +82,7 @@ bitbake core-image-x11 -c populate_sdk
 Install SDK:
 
 ```
-sudo $WORK/build/tmp/deploy/sdk/magicphono-glibc-x86_64-core-image-x11-aarch64-toolchain-2.1.3.sh
+sudo $WORK/build/tmp/deploy/sdk/magicphono-glibc-x86_64-core-image-x11-aarch64-toolchain-1.0.0.sh
 ```
 
 Build image:
