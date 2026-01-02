@@ -78,8 +78,9 @@ my_postprocess_function(){
     rm -f ${IMAGE_ROOTFS}/usr/lib/libdirect-1.7.so*
     rm -f ${IMAGE_ROOTFS}/usr/lib/libdirectfb*
     rm -f ${IMAGE_ROOTFS}/usr/lib/libfusion-1.7.so*
-    rm -f ${IMAGE_ROOTFS}/etc/init.d/sshd
-    rm -f ${IMAGE_ROOTFS}/etc/systemd/system/sockets.target.wants/sshd.socket
+    rm -f ${IMAGE_ROOTFS}/etc/systemd/system/dbus-org.freedesktop.Avahi.service
+    rm -f ${IMAGE_ROOTFS}/etc/systemd/system/multi-user.target.wants/avahi-daemon.service
+    rm -f ${IMAGE_ROOTFS}/etc/systemd/system/sockets.target.wants/avahi-daemon.socket
     rm -f ${IMAGE_ROOTFS}/usr/lib/libgtk-x11*
     rm -f ${IMAGE_ROOTFS}/usr/bin/gtk-*
 }
