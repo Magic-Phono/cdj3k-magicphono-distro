@@ -3,4 +3,8 @@ IMAGE_INSTALL_append = " \
     libsdl \
     mpg123 \
     chocolatedoom \
+    twm \
+    xclock \
+    xeyes \
+    xterm \
 "
