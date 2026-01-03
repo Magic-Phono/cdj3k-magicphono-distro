@@ -39,7 +39,7 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 ### Option 1 (easy): Copy a Pre-built Image to an SD-card
 
 - Dowload a SD-card image from the Releases page.
-- Write it to a SD-card using a tool like Disk Utility or <a href="https://etcher.balena.io/" target="_blank">etcher</a>.
+- Write it to a SD-card using a tool like <a href="https://www.raspberrypi.com/software/" target="_blank">Raspberry Pi Imager</a> (despite the name it can write any image file to an SD card).
 
 ### Option 2 (developer): Build From Source and Copy to an SD-card
 
