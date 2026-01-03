@@ -11,7 +11,7 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 
 ## Device Driver Support
 
-| Device  | Working? | Kernel Driver | Notes |
+| Device  | Status | Kernel Driver | Notes |
 | ------------- | ------------- | ------------- | ------------- |
 | Serial  | ✅  | `sh-sci` | Onboard serial via `/dev/ttySC0` |
 | Display  | ✅ | `rcar-du` | |
@@ -33,7 +33,7 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 - Compatible with Renesas SoC based CDJ-3000s.
 
 ### Prerequisites
-- MagicPhono Loader installed on a compatible CDJ-3000.
+- Requires <a href="https://github.com/Magic-Phono/cdj3k-magicphono-loader">MagicPhono Loader</a> to be installed on a compatible CDJ-3000.
 - An SD-card with of at least 1 GiB in size.
 
 ### Option 1 (easy): Copy a Pre-built Image to an SD-card
@@ -48,7 +48,7 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 
 ## Running
 
-- On a CDJ-3000 with MagicPhono Loader installed, put the SD-card in the SD slot and turn the CDJ-3000 on.
+- On a CDJ-3000 with <a href="https://github.com/Magic-Phono/cdj3k-magicphono-loader">MagicPhono Loader</a> installed, put the SD-card in the SD slot and turn the CDJ-3000 on.
 - MagicPhono Linux should boot from the SD-card.
 - If booting from the SD-card fails, the CDJ-3000 will boot from its internal firmware as usual.
 
