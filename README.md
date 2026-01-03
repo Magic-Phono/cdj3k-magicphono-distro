@@ -94,6 +94,7 @@ Build cross-compiler and SDK:
 
 ```
 cd $WORK/build
+bitbake parted-native
 bitbake core-image-x11 -c populate_sdk
 ```
 
@@ -103,7 +104,7 @@ Install SDK:
 sudo $WORK/build/tmp/deploy/sdk/magicphono-glibc-x86_64-core-image-x11-aarch64-toolchain-1.0.0.sh
 ```
 
-Build image:
+Build images:
 
 ```
 cd $WORK/build
@@ -113,3 +114,8 @@ bitbake core-image-x11
 ```
 
 Artifacts are in `$WORK/build/tmp/deploy/images/salvator-x/`.
+
+Build SD card image:
+```
+wic create ../magicphono/wic/sdcard.wks -e core-image-x11
+```
