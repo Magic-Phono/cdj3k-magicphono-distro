@@ -14,7 +14,6 @@ BBLAYERS ?= " \
   ##OEROOT##/../meta-linaro/meta-optee \
   ##OEROOT##/../meta-openembedded/meta-oe \
   ##OEROOT##/../meta-openembedded/meta-filesystems \
+  ##OEROOT##/../meta-openembedded/meta-multimedia \
   ##OEROOT##/../meta-cdj3k \
   "
-
-
