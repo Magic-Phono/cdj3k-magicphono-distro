@@ -329,7 +329,7 @@ class Partition(object):
         if self.label:
             label_str = "-L %s" % self.label
 
-        mkfs_cmd = "mkfs.%s -F %s %s %s" % \
+        mkfs_cmd = "mkfs.%s -F %s %s %s -O ^metadata_csum,^64bit,^extent" % \
             (self.fstype, extra_imagecmd, label_str, rootfs)
         exec_native_cmd(mkfs_cmd, native_sysroot)
 
