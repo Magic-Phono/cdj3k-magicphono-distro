@@ -19,8 +19,8 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 | eMMC  | ✅ | `renesas_sdhi` | `/dev/mmcblk0` |
 | SD card  | ✅ | `renesas_sdhi` | `/dev/mmcblk1` |
 | USB  | ✅ | `phy-rcar-gen3-usb[2,3]` | Need to add hotplug support |
-| Digital Audio  | ✅ | `ak4104` | |
-| Analog Audio  | ❌ | `ak4490` | Need to figure out initialization from userspace |
+| Audio DIT  | ✅ | `ak4104` | |
+| Audio DAC  | ❌ | `ak4490` | Need to figure out initialization from userspace |
 | Controls  | 🛠️ | `subucom_spi` | Partial support via [`cdj3k-subucom-tools`](https://github.com/Magic-Phono/cdj3k-subucom-tools) to `/dev/uinput/event0` |
 | Touchscreen  | ❌ | `subucom_spi` | |
 | LEDs  | 🛠️ | `subucom_spi` | Partial support via [`cdj3k-subucom-tools`](https://github.com/Magic-Phono/cdj3k-subucom-tools) |
