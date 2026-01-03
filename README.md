@@ -11,20 +11,20 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 
 ## Device Driver Support
 
-
-| Device  |  | Notes |
-| ------------- | ------------- |
-| Serial  | ✅  | `sh-sci` on `/dev/ttySC0` |
-| Display  | ✅ |  |
-| Ethernet  | ✅ | `ravb` |
-| SD card  | ✅ | `renesas_sdhi` |
-| USB  | ✅ | `phy-rcar-gen3-usb3`, `phy-rcar-gen3-usb2`, need to add hotplug support |
-| Digital Audio  | ✅ | `ak4104` |
-| Analog Audio  | ❌ | `ak4490` |
-| Controls  | ✅ | `subucom_spi` via `subucom_input` to `uinput` |
-| Touchscreen  | ❌ | `subucom_spi` |
-| LEDs  | ✅ | `subucom_spi` via `subucom_input` |
-| JOG LCD  | ❌ | `subucom_spi` |
+| Device  | Working? | Kernel Driver | Notes |
+| ------------- | ------------- | ------------- | ------------- |
+| Serial  | ✅  | `sh-sci` | Onboard serial via `/dev/ttySC0` |
+| Display  | ✅ | `rcar-du` | |
+| Ethernet  | ✅ | `ravb` | |
+| eMMC  | ✅ | `renesas_sdhi` | `/dev/mmcblk0` |
+| SD card  | ✅ | `renesas_sdhi` | `/dev/mmcblk1` |
+| USB  | ✅ | `phy-rcar-gen3-usb[2,3]` | Need to add hotplug support |
+| Digital Audio  | ✅ | `ak4104` | |
+| Analog Audio  | ❌ | `ak4490` | Need to figure out initialization from userspace |
+| Controls  | 🛠️ | `subucom_spi` | Partial support via [`cdj3k-subucom-tools`](https://github.com/Magic-Phono/cdj3k-subucom-tools) to `/dev/uinput/event0` |
+| Touchscreen  | ❌ | `subucom_spi` | |
+| LEDs  | 🛠️ | `subucom_spi` | Partial support via [`cdj3k-subucom-tools`](https://github.com/Magic-Phono/cdj3k-subucom-tools) |
+| Jog LCD  | ❌ | `subucom_spi` | |
 
 
 ## Installing
