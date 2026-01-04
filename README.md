@@ -114,7 +114,9 @@ bitbake core-image-x11
 
 Artifacts are in `$WORK/build/tmp/deploy/images/salvator-x/`.
 
-Build SD card image:
+Build SD card image (run as root):
+
 ```
-wic create ../magicphono/wic/sdcard.wks -e core-image-x11
+./make-image.sh <image file> <build folder> [<sd card device>]
+# example: ./make-image.sh magicphono1.0.img build/tmp/deploy/images/salvator-x/
 ```
