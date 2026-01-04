@@ -89,6 +89,9 @@ static int ak4490_set_bias_level(struct snd_soc_codec *codec,
 {
 	struct ak4490_private *priv = snd_soc_codec_get_drvdata(codec);
 
+	printk(KERN_INFO "ak4490_set_bias_level: level=0x%x\n",
+			level);
+
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
@@ -121,6 +124,9 @@ static int ak4490_set_dai_fmt(struct snd_soc_dai *codec_dai,
 
 	priv->format = format;
 
+	printk(KERN_INFO "ak4490_set_dai_fmt: format=0x%x\n",
+		format);
+
 	/* clock inversion */
 	if ((format & SND_SOC_DAIFMT_INV_MASK) != SND_SOC_DAIFMT_NB_NF) {
 pr_warn("[ak4490_set_dai_fmt](E1) @ak4490.c\n");
@@ -144,6 +150,9 @@ static int ak4490_digital_mute(struct snd_soc_dai *dai, int mute)
 	struct ak4490_private *priv = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
+	printk(KERN_INFO "ak4490_digital_mute: mute=0x%x\n",
+			mute);
+
 	ret = regmap_update_bits(priv->regmap, AK4490_REG_CONTROL2,
 				 AK4490_SMUTE, !!mute);
 	if (ret < 0)
@@ -159,6 +168,8 @@ static int ak4490_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct ak4490_private *priv = snd_soc_codec_get_drvdata(codec);
 	int ret;
+
+	printk(KERN_INFO "ak4490_hw_params: \n");
 
 	unsigned int reg;
 	int i, rate, width;
@@ -388,6 +399,8 @@ static int ak4490_probe(struct snd_soc_codec *codec)
 		return ret;
 	}**/
 
+	printk(KERN_INFO "ak4490_probe: \n");
+
 	if (ak4490->regmap != NULL) {
 		/* Internal Timing Reset */
 		ret = regmap_update_bits(ak4490->regmap, AK4490_REG_CONTROL1,
@@ -403,6 +416,8 @@ static int ak4490_probe(struct snd_soc_codec *codec)
 static int ak4490_remove(struct snd_soc_codec *codec)
 {
 	struct ak4490_private *ak4490 = snd_soc_codec_get_drvdata(codec);
+
+	printk(KERN_INFO "ak4490_remove: \n");
 
 	if (ak4490->regmap != NULL) {
 		regmap_update_bits(ak4490->regmap, AK4490_REG_CONTROL1,
@@ -475,6 +490,9 @@ static int ak4490_spi_probe(struct spi_device *spi)
 	struct ak4490_private *ak4490;
 	int ret;
 
+
+	printk(KERN_INFO "ak4490_spi_probe: starting...\n");
+
 	spi->bits_per_word = 8;
 	spi->mode = SPI_MODE_3;
 	spi->chip_select = 1;
@@ -514,11 +532,17 @@ static int ak4490_spi_probe(struct spi_device *spi)
 
 	ret =  snd_soc_register_codec(&spi->dev,
 			&soc_codec_dev_ak4490, &ak4490_dai, 1);
+
+
+	printk(KERN_INFO "ak4490_spi_probe: done.\n");
+
 	return ret;
 }
 
 static int ak4490_spi_remove(struct spi_device *spi)
 {
+	printk(KERN_INFO "ak4490_spi_remove: \n");
+
 	snd_soc_unregister_codec(&spi->dev);
 	return 0;
 }

@@ -44,7 +44,6 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 ### Option 2 (developer): Build From Source and Copy to an SD-card
 
 - Follow Build Requirements/Instructions below.
-- Format and write artifacts to a SD-card (TODO: add instructions)
 
 ## Running
 
