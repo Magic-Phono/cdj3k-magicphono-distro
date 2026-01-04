@@ -20,7 +20,7 @@ create_image()
     parted ${DEV} --script -- mkpart primary ext4 0% 700M
 
     echo "  🏃‍♂️‍➡️ Formatting partition..."
-    mkfs.ext4 -v ${DEV}p1 -O ^extent
+    mkfs.ext4 -v ${DEV}p1 -O ^extent,^64bit
 
     parted ${DEV} print
 
@@ -59,7 +59,7 @@ write_card()
     echo "➡️  write_card: from ${FILE} to ${DEV}"
 
     echo "  🏃‍♂️‍➡️ Writing disk image..."
-    sudo dd if=${FILE} of=${DEV} bs=710M status=progress count=1
+    dd if=${FILE} of=${DEV} bs=710M status=progress count=1
 
     echo "✅ write_card: done"
 }
