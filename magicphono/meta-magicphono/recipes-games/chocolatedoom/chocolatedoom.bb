@@ -8,7 +8,10 @@ RRECOMMENDS_${PN} = "freedoom"
 
 PV = "2.3.0"
 PR = "r0"
-SRC_URI = "https://github.com/chocolate-doom/chocolate-doom/archive/chocolate-doom-${PV}.tar.gz"
+SRC_URI = " \
+  https://github.com/chocolate-doom/chocolate-doom/archive/chocolate-doom-${PV}.tar.gz \
+  file://default.cfg \
+ "
 SRC_URI[md5sum] = "42506f5672fd94d8c2019f4ce0da1c07"
 SRC_URI[sha256sum] = "aac52a0b26cd43d6723874feca4bb7c5ea9fd42a04e1be1f07b2c3557bd5a744"
 
@@ -19,7 +22,13 @@ inherit autotools-brokensep gettext pkgconfig
 S = "${WORKDIR}/chocolate-doom-chocolate-doom-${PV}"
 
 
+do_install_append() {
+    install -d /home/root/.chocolatedoom/
+    install -m 644 ${WORKDIR}/default.cfg /home/root/.chocolatedoom/
+}
+
 
 FILES_${PN} = "/usr/share ${bindir}"
+FILES_${PN} += "/usr/share ${bindir}"
 
 
