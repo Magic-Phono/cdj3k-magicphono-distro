@@ -13,4 +13,4 @@ inherit autotools
 SRC_URI[md5sum] = "cfb2a5cdb74186e9d71ffe220b543581"
 SRC_URI[sha256sum] = "c214fd3a4ef451b48a21f081eaebbaf8144916dd3e821c2c412241098f186771"
 
-BBCLASSEXTEND = "nativesdk"
+BBCLASSEXTEND = "native"
