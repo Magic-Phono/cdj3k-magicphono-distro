@@ -29,6 +29,6 @@ do_install_append() {
 
 
 FILES_${PN} = "/usr/share ${bindir}"
-FILES_${PN} += "/usr/share ${bindir}"
+FILES_${PN} += "/home/root/.chocolatedoom/default.cfg"
 
 
