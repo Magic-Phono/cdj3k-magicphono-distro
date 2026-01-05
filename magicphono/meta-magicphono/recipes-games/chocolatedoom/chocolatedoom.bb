@@ -23,8 +23,8 @@ S = "${WORKDIR}/chocolate-doom-chocolate-doom-${PV}"
 
 
 do_install_append() {
-    install -d /home/root/.chocolatedoom/
-    install -m 644 ${WORKDIR}/default.cfg /home/root/.chocolatedoom/
+    install -d ${D}/home/root/.chocolatedoom/
+    install -m 644 ${WORKDIR}/default.cfg ${D}/home/root/.chocolatedoom/
 }
 
 
