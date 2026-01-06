@@ -1,27 +1,27 @@
-SUMMARY = "DOOM support for systemd"
+SUMMARY = "USB automount support for systemd"
 LICENSE = "CLOSED"
 
 
 SRC_URI = " \
-	file://doom.service \
-	file://start_doom.sh \
+	file://usb-mount@.service \
+	file://start-usb.sh \
 "
 
 S = "${WORKDIR}"
 
 do_install() {
 	install -d ${D}${systemd_unitdir}/system/
-	install -m 0644 ${WORKDIR}/doom.service ${D}${systemd_unitdir}/system/
+	install -m 0644 ${WORKDIR}/usb-mount@.service ${D}${systemd_unitdir}/system/
 
-	install -d ${D}/home/root/scripts/
-	install -m 0755 ${WORKDIR}/start_doom.sh ${D}/home/root/scripts/
+	install -d ${D}/usr/local/bin/
+	install -m 0755 ${WORKDIR}/usb-mount.sh ${D}/usr/local/bin/
 }
 
 RDEPENDS_${PN} = "systemd"
 
 # This is a machine specific file
 FILES_${PN} = "${systemd_unitdir}/system/*.service ${sysconfdir}"
-FILES_${PN} += "/home/root/scripts/start_doom.sh"
+FILES_${PN} += "/usr/local/bin/usb-mount.sh"
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
