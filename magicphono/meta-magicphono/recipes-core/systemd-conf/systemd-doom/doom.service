@@ -1,0 +1,12 @@
+[Unit]
+Description=DOOM autostart service
+ConditionPathExists=/home/root/scripts
+
+[Service]
+Type=simple
+Restart=no
+ExecStart=/home/root/scripts/start_doom.sh
+ExecStopPost=/home/root/scripts/stop_doom.sh
+
+[Install]
+WantedBy=graphical.target
