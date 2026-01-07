@@ -4,7 +4,7 @@ LICENSE = "CLOSED"
 
 SRC_URI = " \
 	file://usb-mount@.service \
-	file://start-usb.sh \
+	file://usb-mount.sh \
 "
 
 S = "${WORKDIR}"
@@ -26,7 +26,7 @@ FILES_${PN} += "/usr/local/bin/usb-mount.sh"
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
 SYSTEMD_SERVICE_${PN} = "usb-mount@"
-SYSTEMD_AUTO_ENABLE_doom = "enable"
+SYSTEMD_AUTO_ENABLE_${PN} = "enable"
 
 # As this package is tied to systemd, only build it when we're also building systemd.
 python () {
