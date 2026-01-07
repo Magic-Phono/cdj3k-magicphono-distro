@@ -3,6 +3,8 @@
 export DISPLAY=:0
 export SDL_AUDIODRIVER=alsa
 
+cp /media/usb/sda1/Doom1.WAD .
+
 subucom_uinput&
 sleep 1
 startx&
