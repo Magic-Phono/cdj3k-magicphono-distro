@@ -25,6 +25,9 @@ FILES_${PN} += "/home/root/scripts/start_doom.sh"
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
+SYSTEMD_SERVICE_${PN} = "doom.service"
+SYSTEMD_AUTO_ENABLE_${PN} = "enable"
+
 # As this package is tied to systemd, only build it when we're also building systemd.
 python () {
     if not bb.utils.contains ('DISTRO_FEATURES', 'systemd', True, False, d):

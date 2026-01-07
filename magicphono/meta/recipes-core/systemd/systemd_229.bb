@@ -30,6 +30,7 @@ PV = "229+git${SRCPV}"
 
 SRC_URI = "git://github.com/systemd/systemd.git;branch=main \
            file://touchscreen.rules \
+           file://90-local.rules \
            file://00-create-volatile.conf \
            file://init \
            file://run-ptest \

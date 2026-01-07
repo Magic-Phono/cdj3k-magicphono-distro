@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir /mnt/usb
 mount /dev/sda1 /mnt/usb/
 

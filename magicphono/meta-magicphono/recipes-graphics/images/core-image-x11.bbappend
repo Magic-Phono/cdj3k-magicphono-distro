@@ -8,6 +8,7 @@ IMAGE_INSTALL_append = " \
     mpg123 \
     chocolatedoom \
     systemd-doom \
+    systemd-usb-mount \
     twm \
     xclock \
     xeyes \
