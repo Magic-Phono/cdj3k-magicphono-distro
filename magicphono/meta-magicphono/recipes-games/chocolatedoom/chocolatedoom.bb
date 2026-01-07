@@ -23,12 +23,12 @@ S = "${WORKDIR}/chocolate-doom-chocolate-doom-${PV}"
 
 
 do_install_append() {
-    install -d ${D}/home/root/.chocolatedoom/
-    install -m 644 ${WORKDIR}/default.cfg ${D}/home/root/.chocolatedoom/
+    install -d ${D}/home/root/.chocolate-doom/
+    install -m 644 ${WORKDIR}/default.cfg ${D}/home/root/.chocolate-doom/
 }
 
 
 FILES_${PN} = "/usr/share ${bindir}"
-FILES_${PN} += "/home/root/.chocolatedoom/default.cfg"
+FILES_${PN} += "/home/root/.chocolate-doom/default.cfg"
 
 
