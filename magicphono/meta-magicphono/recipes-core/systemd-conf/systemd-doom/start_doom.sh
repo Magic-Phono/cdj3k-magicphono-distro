@@ -1,9 +1,11 @@
 #!/bin/bash
 
-mkdir /mnt/usb
-mount /dev/sda1 /mnt/usb/
-
 export DISPLAY=:0
 export SDL_AUDIODRIVER=alsa
 
-chocolate-doom -iwad Doom1.WAD 
+subucom_uinput&
+sleep 1
+startx&
+sleep 2
+
+chocolate-doom -iwad /tmp/Doom1.WAD 

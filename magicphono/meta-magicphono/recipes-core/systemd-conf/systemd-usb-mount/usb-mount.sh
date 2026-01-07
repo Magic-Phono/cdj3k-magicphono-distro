@@ -28,17 +28,25 @@ do_mount()
     fi
 
     # Get info for this drive: $ID_FS_LABEL, $ID_FS_UUID, and $ID_FS_TYPE
-    eval $(/sbin/blkid -o udev ${DEVICE})
+    #eval $(/sbin/blkid -o udev ${DEVICE})
+
+    # Get device type
+    if [[ ${DEVBASE} =~ sd[a-h][1-4] ]]; then
+        DEVICE_TYPE="usb"
+    fi
+    if [[ ${DEVBASE} =~ mmcblk[1-8]p[1-4] ]]; then
+        DEVICE_TYPE="sd"
+    fi
 
     # Figure out a mount point to use
-    LABEL=${ID_FS_LABEL}
-    if [[ -z "${LABEL}" ]]; then
-        LABEL=${DEVBASE}
-    elif /bin/grep -q " /media/${LABEL} " /etc/mtab; then
-        # Already in use, make a unique one
-        LABEL+="-${DEVBASE}"
-    fi
-    MOUNT_POINT="/media/${LABEL}"
+    #LABEL=${ID_FS_LABEL}
+    #if [[ -z "${LABEL}" ]]; then
+    LABEL=${DEVBASE}
+    #elif /bin/grep -q " /media/${LABEL} " /etc/mtab; then
+    #    # Already in use, make a unique one
+    #    LABEL+="-${DEVBASE}"
+    #fi
+    MOUNT_POINT="/media/${DEVICE_TYPE}/${LABEL}"
 
     echo "Mount point: ${MOUNT_POINT}"
 
