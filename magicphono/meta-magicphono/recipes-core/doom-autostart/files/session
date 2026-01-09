@@ -1,0 +1,12 @@
+#!/bin/sh
+
+xset s off  > /dev/null 2>&1      # don't activate screensaver
+xset -dpms   > /dev/null 2>&1     # disable DPMS (Energy Star) features.
+xset s noblank   > /dev/null 2>&1 # don't blank the video device
+
+
+subucom_uinput&
+sleep 1
+. /home/root/scripts/start_doom.sh &
+
+exec dbus-run-session matchbox-window-manager -use_titlebar no -use_cursor no

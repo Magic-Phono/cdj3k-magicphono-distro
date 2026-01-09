@@ -1,0 +1,5 @@
+FILESEXTRAPATHS_prepend += " ${THISDIR}/files: "
+SRC_URI += "file://xserver-nodm.service.in"
+SYSTEMD_AUTO_ENABLE_${PN} = "enable"
+PACKAGECONFIG_remove = "blank"
+PACKAGECONFIG_append = " nocursor"
