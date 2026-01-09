@@ -10,8 +10,14 @@ IMAGE_INSTALL_append = " \
     mpg123 \
     systemd-doom \
     systemd-usb-mount \
-    twm \
-    xclock \
-    xeyes \
-    xterm \
+    matchbox-terminal \
+    matchbox-wm \
+    mini-x-session \
+    liberation-fonts \
 "
+
+
+#    twm \
+#    xclock \
+#    xeyes \
+#    xterm \
