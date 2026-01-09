@@ -14,7 +14,6 @@ IMAGE_INSTALL_append = " \
     doom-autostart \
     matchbox-wm \
     matchbox-terminal \
-    unclutter-xfixes \
     xdotool \
     mini-x-session \
     liberation-fonts \
