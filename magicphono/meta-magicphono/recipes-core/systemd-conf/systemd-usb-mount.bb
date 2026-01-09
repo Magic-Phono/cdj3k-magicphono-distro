@@ -25,6 +25,7 @@ FILES_${PN} += "/usr/local/bin/usb-mount.sh"
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
+SYSTEMD_PACKAGES = "${PN}
 SYSTEMD_SERVICE_${PN} = "usb-mount@"
 SYSTEMD_AUTO_ENABLE_${PN} = "enable"
 

@@ -15,6 +15,9 @@ do_install() {
 
 	install -d ${D}/home/root/scripts/
 	install -m 0755 ${WORKDIR}/start_doom.sh ${D}/home/root/scripts/
+
+	install -d ${D}${sysconfdir}/systemd/system/graphical.target.wants/
+	ln -s ${systemd_unitdir}/system/doom.service ${D}${sysconfdir}/systemd/system/graphical.target.wants/doom.service
 }
 
 RDEPENDS_${PN} = "systemd"
@@ -25,6 +28,7 @@ FILES_${PN} += "/home/root/scripts/start_doom.sh"
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
+SYSTEMD_PACKAGES = "${PN}"
 SYSTEMD_SERVICE_${PN} = "doom.service"
 SYSTEMD_AUTO_ENABLE_${PN} = "enable"
 

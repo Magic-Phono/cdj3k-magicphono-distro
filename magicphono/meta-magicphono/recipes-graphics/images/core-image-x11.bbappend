@@ -21,3 +21,6 @@ IMAGE_INSTALL_append = " \
 #    xclock \
 #    xeyes \
 #    xterm \
+
+
+SYSTEMD_DEFAULT_TARGET = "graphical.target"
