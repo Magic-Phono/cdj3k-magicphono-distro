@@ -28,7 +28,6 @@ FILES_${PN} += "/home/root/scripts/start_doom.sh"
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
-SYSTEMD_PACKAGES = "${PN}"
 SYSTEMD_SERVICE_${PN} = "doom.service"
 SYSTEMD_AUTO_ENABLE_${PN} = "enable"
 
