@@ -9,17 +9,13 @@ IMAGE_INSTALL_append = " \
     libsdl \
     libsamplerate0 \
     mpg123 \
-
     packagegroup-core-x11-xserver \
     packagegroup-core-x11-utils \
-    
     doom-autostart \
-
     matchbox-wm \
     matchbox-terminal \
     unclutter-xfixes \
     xdotool \
-
     mini-x-session \
     liberation-fonts \
 "
