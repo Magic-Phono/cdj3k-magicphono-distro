@@ -7,7 +7,7 @@ After=subucom-uinput.service
 Type=simple
 Restart=no
 ExecStart=/home/root/scripts/start_doom.sh
-ExecStopPost=/home/root/scripts/stop_doom.sh
+ExecStopPost=
 
 [Install]
 WantedBy=graphical.target

@@ -5,7 +5,8 @@ Before=graphical.target
 
 [Service]
 Type=forking
-ExecStart=daemonize -p /var/run/subucom_uinput.pid -o /var/log/subucom_uinput.log /usr/bin/subucom_uinput
+ExecStart=/usr/sbin/daemonize -p /var/run/subucom_uinput.pid -o /var/log/subucom_uinput.log /usr/bin/subucom_uinput
+ExecStop=
 PIDFile=/var/run/subucom_uinput.pid
 
 [Install]
