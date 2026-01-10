@@ -32,6 +32,9 @@ Includes GPL/LGPL code from https://www.pioneerdj.com/en-gb/support/open-source-
 ### Compatibility
 - Compatible with Renesas SoC based CDJ-3000s.
 
+> [!NOTE]
+> There are reports that a Rockchip variant of the CDJ-3000 exists. Trying to install Magic Phono on this variant has not been tested. If you have one of these variants, please reach out to us!
+
 ### Prerequisites
 - Requires <a href="https://github.com/Magic-Phono/cdj3k-magicphono-loader">MagicPhono Loader</a> to be installed on a compatible CDJ-3000.
 - An SD-card with of at least 1 GiB in size.

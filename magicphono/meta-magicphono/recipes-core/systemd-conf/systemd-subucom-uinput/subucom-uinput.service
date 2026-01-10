@@ -1,0 +1,12 @@
+[Unit]
+Description=subucom uinput driver
+Before=doom.service
+Before=graphical.target
+
+[Service]
+Type=forking
+ExecStart=daemonize -p /var/run/subucom_uinput.pid -o /var/log/subucom_uinput.log /usr/bin/subucom_uinput
+PIDFile=/var/run/subucom_uinput.pid
+
+[Install]
+WantedBy=sysinit.target

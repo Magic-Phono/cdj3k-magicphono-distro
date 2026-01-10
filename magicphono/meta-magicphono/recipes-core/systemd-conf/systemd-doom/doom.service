@@ -1,6 +1,7 @@
 [Unit]
 Description=DOOM autostart service
 ConditionPathExists=/home/root/scripts
+After=subucom-uinput.service
 
 [Service]
 Type=simple
