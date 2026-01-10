@@ -4,6 +4,8 @@ LICENSE="CLOSED"
 
 RDEPENDS_${PN} = "mini-x-session"
 
+RDEPENDS_${PN} = "bash"
+
 SRC_URI_append = " file://session \
                    file://start_doom.sh \
     "

@@ -9,6 +9,7 @@ IMAGE_INSTALL_append = " \
     libsdl \
     libsamplerate0 \
     mpg123 \
+    packagegroup-fonts-truetype \
     packagegroup-core-x11-xserver \
     packagegroup-core-x11-utils \
     doom-autostart \
@@ -17,6 +18,8 @@ IMAGE_INSTALL_append = " \
     xdotool \
     mini-x-session \
     liberation-fonts \
+    dejavu-sans-ttf \
+    fontconfig \
     twm \ 
     xclock \ 
     xeyes \

@@ -93,7 +93,6 @@ Build cross-compiler and SDK:
 
 ```
 cd $WORK/build
-bitbake parted-native
 bitbake core-image-x11 -c populate_sdk
 ```
 

@@ -6,8 +6,9 @@ xset s noblank   > /dev/null 2>&1 # don't blank the video device
 
 subucom_uinput&
 sleep 1
-startx&
-sleep 2
+
+# startx&
+# sleep 2
 . /home/root/scripts/start_doom.sh &
 
 #exec dbus-run-session twm
