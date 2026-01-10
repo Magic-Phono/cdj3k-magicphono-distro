@@ -17,6 +17,10 @@ IMAGE_INSTALL_append = " \
     xdotool \
     mini-x-session \
     liberation-fonts \
+    twm \ 
+    xclock \ 
+    xeyes \
+    xterm \
 "
 
 #    kiosk-refresh 
@@ -26,10 +30,7 @@ IMAGE_INSTALL_append = " \
 
 #    systemd-doom
 
-#    twm 
-#    xclock 
-#    xeyes 
-#    xterm 
+
 
 
 SYSTEMD_DEFAULT_TARGET = "graphical.target"
