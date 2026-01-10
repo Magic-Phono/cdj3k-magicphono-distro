@@ -15,7 +15,6 @@ IMAGE_INSTALL_append = " \
     packagegroup-fonts-truetype \
     packagegroup-core-x11-xserver \
     packagegroup-core-x11-utils \
-    doom-autostart \
     matchbox-wm \
     matchbox-terminal \
     xdotool \
